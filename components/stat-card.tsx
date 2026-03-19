@@ -1,18 +1,24 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Colors } from '@/src/theme/colors';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+
+const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 interface StatCardProps {
   label: string;
   value: string;
   highlight?: boolean;
+  accentColor?: string;
 }
 
-export function StatCard({ label, value, highlight = false }: StatCardProps) {
+export function StatCard({ label, value, highlight = false, accentColor }: StatCardProps) {
+  const valueColor = accentColor ?? (highlight ? Colors.green : Colors.textHeading);
+
   return (
-    <View style={[styles.card, highlight && styles.cardHighlight]}>
-      <Text style={[styles.value, highlight && styles.valueHighlight]} numberOfLines={1} adjustsFontSizeToFit>
+    <View style={styles.card}>
+      <Text style={styles.label}>{label.toUpperCase()}</Text>
+      <Text style={[styles.value, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
-      <Text style={[styles.label, highlight && styles.labelHighlight]}>{label}</Text>
     </View>
   );
 }
@@ -20,30 +26,22 @@ export function StatCard({ label, value, highlight = false }: StatCardProps) {
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: '#f0faf2',
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
     borderRadius: 16,
     padding: 16,
-    alignItems: 'flex-start',
-    gap: 4,
-  },
-  cardHighlight: {
-    backgroundColor: '#0C831F',
-  },
-  value: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0C831F',
-    letterSpacing: -0.5,
-  },
-  valueHighlight: {
-    color: '#fff',
+    gap: 8,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#555',
+    fontSize: 9,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+    letterSpacing: 1,
   },
-  labelHighlight: {
-    color: 'rgba(255,255,255,0.85)',
+  value: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
 });

@@ -1,5 +1,6 @@
 import { INJECTED_SCRIPT } from '@/lib/injectedScript';
 import { mergeOrders } from '@/lib/storage';
+import { Colors } from '@/src/theme/colors';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -11,7 +12,6 @@ import {
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 
 const BLINKIT_URL = 'https://blinkit.com';
-const BLINKIT_GREEN = '#0C831F';
 
 function isOrdersPage(url: string): boolean {
   return url.includes('/past-orders') || url.includes('/orders');
@@ -69,7 +69,7 @@ export default function OrdersScreen() {
         startInLoadingState
         renderLoading={() => (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={BLINKIT_GREEN} />
+            <ActivityIndicator size="large" color={Colors.green} />
           </View>
         )}
         onNavigationStateChange={onNavigationStateChange}
@@ -79,7 +79,7 @@ export default function OrdersScreen() {
       {/* Scanning progress banner */}
       {isSyncing && (
         <View style={styles.scanBanner}>
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={Colors.white} />
           <Text style={styles.scanBannerText}>
             Scanning... {syncProgress ?? 0} orders found
           </Text>
@@ -93,7 +93,7 @@ export default function OrdersScreen() {
         </View>
       )}
 
-      {/* Sync Orders button — only shown on orders page when not syncing */}
+      {/* Sync Orders button */}
       {showSyncButton && (
         <TouchableOpacity style={styles.syncButton} onPress={handleSync} activeOpacity={0.85}>
           <Text style={styles.syncButtonText}>Sync Orders</Text>
@@ -106,6 +106,7 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.bgBase,
   },
   webView: {
     flex: 1,
@@ -114,14 +115,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.bgBase,
   },
   scanBanner: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: BLINKIT_GREEN,
+    backgroundColor: Colors.greenDark,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -130,31 +131,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   resultBanner: {
-    backgroundColor: '#1a7a2e',
+    backgroundColor: Colors.greenDark,
   },
   scanBannerText: {
-    color: '#fff',
-    fontSize: 14,
+    color: Colors.white,
+    fontSize: 13,
     fontWeight: '600',
   },
   syncButton: {
     position: 'absolute',
     bottom: 80,
     alignSelf: 'center',
-    backgroundColor: BLINKIT_GREEN,
+    backgroundColor: Colors.greenDark,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   syncButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: Colors.white,
+    fontSize: 15,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
 });

@@ -1,5 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
 import { formatCurrency } from '@/lib/analytics';
+import { Colors } from '@/src/theme/colors';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+
+const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 interface MonthlyBarProps {
   month: string;
@@ -10,16 +13,17 @@ interface MonthlyBarProps {
 
 export function MonthlyBar({ month, amount, maxAmount, orderCount }: MonthlyBarProps) {
   const barPercent = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+  const isMax = amount === maxAmount;
 
   return (
     <View style={styles.row}>
       <Text style={styles.month}>{month}</Text>
       <View style={styles.barContainer}>
-        <View style={[styles.bar, { width: `${barPercent}%` }]} />
+        <View style={[styles.bar, { width: `${barPercent}%` as any }, isMax && styles.barMax]} />
       </View>
       <View style={styles.rightCol}>
         <Text style={styles.amount}>{formatCurrency(amount)}</Text>
-        <Text style={styles.count}>{orderCount} order{orderCount !== 1 ? 's' : ''}</Text>
+        <Text style={styles.count}>{orderCount}×</Text>
       </View>
     </View>
   );
@@ -33,35 +37,44 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   month: {
-    width: 72,
-    fontSize: 13,
-    color: '#555',
-    fontWeight: '500',
+    width: 40,
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: mono,
   },
   barContainer: {
     flex: 1,
-    height: 8,
-    backgroundColor: '#e8f5eb',
-    borderRadius: 4,
+    height: 3,
+    backgroundColor: Colors.borderSubtle,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   bar: {
     height: '100%',
-    backgroundColor: '#0C831F',
-    borderRadius: 4,
+    backgroundColor: Colors.borderStrong,
+    borderRadius: 2,
+  },
+  barMax: {
+    backgroundColor: Colors.textHeading,
   },
   rightCol: {
-    width: 90,
-    alignItems: 'flex-end',
-    gap: 1,
+    width: 86,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
   },
   amount: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    fontFamily: mono,
   },
   count: {
-    fontSize: 11,
-    color: '#888',
+    fontSize: 10,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+    width: 20,
+    textAlign: 'right',
   },
 });
