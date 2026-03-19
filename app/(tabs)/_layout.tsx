@@ -33,8 +33,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Orders',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="cart.fill" color={color} />,
+          title: 'Sync',
+          tabBarIcon: ({ color }) => <IconSymbol size={24} name="arrow.triangle.2.circlepath" color={color} />,
         }}
       />
     </Tabs>
