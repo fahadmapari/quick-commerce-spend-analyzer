@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.blinkitanalyser"
+      "bundleIdentifier": "com.anonymous.blinkitanalyser",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow blinkit-analyser to use your location so Blinkit can load the nearest store automatically during sync."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,6 +24,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "package": "com.anonymous.blinkitanalyser"
     },
     "web": {
