@@ -1,12 +1,13 @@
 import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
-import { getOrdersAsObjects } from '@/lib/storage';
+import { clearOrders, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type BarRange = '3M' | '6M' | '1Y' | '2Y' | 'lifetime';
 const BAR_RANGES: { label: string; key: BarRange; months: number | null }[] = [
@@ -25,6 +26,8 @@ export default function DashboardScreen() {
   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
   const [barRange, setBarRange] = useState<BarRange>('1Y');
   const [lifetimeChunk, setLifetimeChunk] = useState(LIFETIME_PAGE);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,6 +45,12 @@ export default function DashboardScreen() {
   const avgOrder = hasData
     ? Math.round(summary.lifetimeSpend / summary.totalOrders)
     : 0;
+
+  const handleClearData = async () => {
+    await clearOrders();
+    setSummary(null);
+    setConfirmVisible(false);
+  };
 
   // Slice monthlyBreakdown (newest-first) for the bar chart
   const barSliceCount = (() => {
@@ -63,10 +72,13 @@ export default function DashboardScreen() {
 
       {/* Header */}
       <View style={styles.header}>
+        {/* Left: title */}
         <View style={styles.headerLeft}>
           <Text style={styles.headerLabel}>BLINKIT SPEND</Text>
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
+
+        {/* Center: sync date */}
         {summary?.lastSyncedAt && (
           <View style={styles.syncPill}>
             <View style={styles.syncDot} />
@@ -75,7 +87,53 @@ export default function DashboardScreen() {
             </Text>
           </View>
         )}
+
+        {/* Right: account icon */}
+        <TouchableOpacity
+          style={styles.accountBtn}
+          onPress={() => setMenuVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="person" size={17} color={Colors.textMuted} />
+        </TouchableOpacity>
       </View>
+
+      {/* Dropdown menu */}
+      <Modal transparent visible={menuVisible} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={styles.menuCard}>
+            <Pressable
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(false);
+                setConfirmVisible(true);
+              }}
+            >
+              <Text style={styles.menuItemText}>Clear all data</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Confirm clear dialog */}
+      <Modal transparent visible={confirmVisible} animationType="fade" onRequestClose={() => setConfirmVisible(false)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>Clear all data?</Text>
+            <Text style={styles.confirmBody}>
+              This will permanently erase all synced orders. Only do this if you want to log in and fetch data from a new account.
+            </Text>
+            <View style={styles.confirmActions}>
+              <Pressable style={styles.confirmCancel} onPress={() => setConfirmVisible(false)}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.confirmDelete} onPress={handleClearData}>
+                <Text style={styles.confirmDeleteText}>Clear data</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {hasData ? (
         <>
@@ -217,11 +275,12 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
   },
   headerLeft: {
     gap: 4,
+    flex: 1,
   },
   headerLabel: {
     fontSize: 11,
@@ -245,7 +304,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    marginTop: 4,
   },
   syncDot: {
     width: 6,
@@ -257,6 +315,106 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textMuted,
     fontFamily: mono,
+  },
+  accountBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.bgOverlay,
+    borderWidth: 1,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+
+  // Dropdown menu
+  menuOverlay: {
+    flex: 1,
+  },
+  menuCard: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: '#ef4444',
+    fontWeight: '500',
+  },
+
+  // Confirm dialog
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  confirmCard: {
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    gap: 12,
+  },
+  confirmTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.textHeading,
+  },
+  confirmBody: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    lineHeight: 21,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  confirmCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.bgElevated,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  confirmCancelText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    fontWeight: '500',
+  },
+  confirmDelete: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+  },
+  confirmDeleteText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
   },
 
   // Hero card
