@@ -18,12 +18,12 @@ import {
   Animated,
   Easing,
   Platform,
-  PermissionsAndroid,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 
@@ -246,11 +246,8 @@ export default function OrdersScreen() {
     }, LOCATION_FALLBACK_MS);
 
     try {
-      const granted = Platform.OS === 'android'
-        ? (await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-          )) === PermissionsAndroid.RESULTS.GRANTED
-        : true;
+      const permission = await Location.requestForegroundPermissionsAsync();
+      const granted = permission.granted;
 
       if (granted) {
         if (Platform.OS === 'android') {
