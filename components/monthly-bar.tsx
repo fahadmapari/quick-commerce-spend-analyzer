@@ -13,13 +13,12 @@ interface MonthlyBarProps {
 
 export function MonthlyBar({ month, amount, maxAmount, orderCount }: MonthlyBarProps) {
   const barPercent = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
-  const isMax = amount === maxAmount;
 
   return (
     <View style={styles.row}>
       <Text style={styles.month}>{month}</Text>
       <View style={styles.barContainer}>
-        <View style={[styles.bar, { width: `${barPercent}%` as any }, isMax && styles.barMax]} />
+        <View style={[styles.bar, { width: `${barPercent}%` as any }]} />
       </View>
       <View style={styles.rightCol}>
         <Text style={styles.amount}>{formatCurrency(amount)}</Text>
@@ -51,11 +50,8 @@ const styles = StyleSheet.create({
   },
   bar: {
     height: '100%',
-    backgroundColor: Colors.borderStrong,
-    borderRadius: 2,
-  },
-  barMax: {
     backgroundColor: Colors.textHeading,
+    borderRadius: 2,
   },
   rightCol: {
     width: 86,
