@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 
 const BLINKIT_URL = 'https://blinkit.com';
@@ -60,7 +61,7 @@ export default function OrdersScreen() {
   const showSyncButton = isOrdersPage(currentUrl) && !isSyncing;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <WebView
         ref={webViewRef}
         source={{ uri: BLINKIT_URL }}
@@ -99,7 +100,7 @@ export default function OrdersScreen() {
           <Text style={styles.syncButtonText}>Sync Orders</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
