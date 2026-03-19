@@ -246,7 +246,6 @@ export default function DashboardScreen() {
       ) : (
         /* Empty state */
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🛒</Text>
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyBody}>
             Go to the <Text style={styles.emptyAccent}>Orders</Text> tab, navigate to your
@@ -274,13 +273,13 @@ const styles = StyleSheet.create({
   // Header
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 12,
   },
   headerLeft: {
-    gap: 4,
     flex: 1,
+    gap: 4,
   },
   headerLabel: {
     fontSize: 11,
@@ -601,9 +600,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 80,
     gap: 14,
-  },
-  emptyIcon: {
-    fontSize: 44,
   },
   emptyTitle: {
     fontSize: 20,

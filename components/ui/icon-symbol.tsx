@@ -20,6 +20,7 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'chart.bar.fill': 'bar-chart',
   'cart.fill': 'shopping-cart',
+  'arrow.triangle.2.circlepath': 'sync',
 } as IconMapping;
 
 /**

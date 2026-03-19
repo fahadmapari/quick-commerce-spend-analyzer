@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/src/theme/colors';
 
 export default function TabLayout() {
@@ -27,14 +27,14 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
           title: 'Sync',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="arrow.triangle.2.circlepath" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="sync" size={24} color={color} />,
         }}
       />
     </Tabs>
