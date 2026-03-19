@@ -53,7 +53,8 @@ export default function OrdersScreen() {
         setIsSyncing(false);
         setSyncProgress(null);
       }
-    } catch {
+    } catch (e) {
+      console.warn('[Sync] onMessage error:', e);
       setIsSyncing(false);
     }
   };
