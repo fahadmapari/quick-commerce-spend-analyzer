@@ -1,112 +1,160 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { INJECTED_SCRIPT } from '@/lib/injectedScript';
+import { mergeOrders } from '@/lib/storage';
+import { useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const BLINKIT_URL = 'https://blinkit.com';
+const BLINKIT_GREEN = '#0C831F';
 
-export default function TabTwoScreen() {
+function isOrdersPage(url: string): boolean {
+  return url.includes('/past-orders') || url.includes('/orders');
+}
+
+export default function OrdersScreen() {
+  const webViewRef = useRef<WebView>(null);
+  const [currentUrl, setCurrentUrl] = useState(BLINKIT_URL);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<number | null>(null);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  const onNavigationStateChange = (navState: WebViewNavigation) => {
+    setCurrentUrl(navState.url);
+  };
+
+  const handleSync = () => {
+    if (!webViewRef.current) return;
+    setIsSyncing(true);
+    setSyncProgress(0);
+    setSyncResult(null);
+    webViewRef.current.injectJavaScript(INJECTED_SCRIPT);
+  };
+
+  const onMessage = async (event: WebViewMessageEvent) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === 'SCROLL_PROGRESS') {
+        setSyncProgress(data.count as number);
+      } else if (data.type === 'ORDERS_EXTRACTED') {
+        const { added, total } = await mergeOrders(data.orders);
+        setIsSyncing(false);
+        setSyncProgress(null);
+        setSyncResult(`Synced ${added} new order${added !== 1 ? 's' : ''} (${total} total)`);
+        setTimeout(() => setSyncResult(null), 4000);
+      } else if (data.type === 'NOT_ON_ORDERS_PAGE') {
+        setIsSyncing(false);
+        setSyncProgress(null);
+      }
+    } catch {
+      setIsSyncing(false);
+    }
+  };
+
+  const showSyncButton = isOrdersPage(currentUrl) && !isSyncing;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <WebView
+        ref={webViewRef}
+        source={{ uri: BLINKIT_URL }}
+        style={styles.webView}
+        javaScriptEnabled
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={BLINKIT_GREEN} />
+          </View>
+        )}
+        onNavigationStateChange={onNavigationStateChange}
+        onMessage={onMessage}
+      />
+
+      {/* Scanning progress banner */}
+      {isSyncing && (
+        <View style={styles.scanBanner}>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.scanBannerText}>
+            Scanning... {syncProgress ?? 0} orders found
+          </Text>
+        </View>
+      )}
+
+      {/* Sync result banner */}
+      {syncResult && (
+        <View style={[styles.scanBanner, styles.resultBanner]}>
+          <Text style={styles.scanBannerText}>{syncResult}</Text>
+        </View>
+      )}
+
+      {/* Sync Orders button — only shown on orders page when not syncing */}
+      {showSyncButton && (
+        <TouchableOpacity style={styles.syncButton} onPress={handleSync} activeOpacity={0.85}>
+          <Text style={styles.syncButtonText}>Sync Orders</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  webView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
+  scanBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: BLINKIT_GREEN,
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  resultBanner: {
+    backgroundColor: '#1a7a2e',
+  },
+  scanBannerText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  syncButton: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: BLINKIT_GREEN,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  syncButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });
