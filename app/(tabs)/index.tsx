@@ -1,16 +1,18 @@
 import { MonthlyBar } from '@/components/monthly-bar';
+import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
 import { getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 export default function DashboardScreen() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
 
   useFocusEffect(
     useCallback(() => {
@@ -97,17 +99,33 @@ export default function DashboardScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Monthly breakdown</Text>
-              <Text style={styles.cardSubtitle}>{summary.monthlyBreakdown.length} MONTHS</Text>
+              <View style={styles.chartToggle}>
+                <Pressable
+                  style={[styles.toggleBtn, chartMode === 'bar' && styles.toggleBtnActive]}
+                  onPress={() => setChartMode('bar')}
+                >
+                  <Text style={[styles.toggleBtnText, chartMode === 'bar' && styles.toggleBtnTextActive]}>Bar</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.toggleBtn, chartMode === 'line' && styles.toggleBtnActive]}
+                  onPress={() => setChartMode('line')}
+                >
+                  <Text style={[styles.toggleBtnText, chartMode === 'line' && styles.toggleBtnTextActive]}>Line</Text>
+                </Pressable>
+              </View>
             </View>
-            {summary.monthlyBreakdown.map((m) => (
-              <MonthlyBar
-                key={`${m.year}-${m.monthIndex}`}
-                month={m.month}
-                amount={m.total}
-                maxAmount={maxMonthly}
-                orderCount={m.orderCount}
-              />
-            ))}
+            {chartMode === 'bar'
+              ? summary.monthlyBreakdown.map((m) => (
+                  <MonthlyBar
+                    key={`${m.year}-${m.monthIndex}`}
+                    month={m.month}
+                    amount={m.total}
+                    maxAmount={maxMonthly}
+                    orderCount={m.orderCount}
+                  />
+                ))
+              : <MonthlyLineChart data={summary.monthlyBreakdown} />
+            }
           </View>
         </>
       ) : (
@@ -256,6 +274,29 @@ const styles = StyleSheet.create({
     color: Colors.textPlaceholder,
     fontFamily: mono,
     letterSpacing: 0.8,
+  },
+  chartToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.bgBase,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  toggleBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  toggleBtnActive: {
+    backgroundColor: Colors.bgElevated,
+  },
+  toggleBtnText: {
+    fontSize: 11,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+  },
+  toggleBtnTextActive: {
+    color: Colors.textPrimary,
   },
 
   // Highlight row
