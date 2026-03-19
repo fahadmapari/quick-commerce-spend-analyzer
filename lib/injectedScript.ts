@@ -215,6 +215,7 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
   function extractOrders() {
     var orders = [];
+    var seen = {};
     var failedBanner = document.querySelector('[class*="tw-rounded-md"]');
     var containers = document.querySelectorAll('[data-pf="reset"]');
 
@@ -235,6 +236,10 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
       if (!amountText.startsWith('\\u20b9')) continue;
       if (!dateText.includes(':')) continue;
+
+      var orderKey = amountText + '::' + dateText;
+      if (seen[orderKey]) continue;
+      seen[orderKey] = true;
 
       orders.push({ rawAmount: amountText, rawDate: dateText });
     }

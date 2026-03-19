@@ -4,11 +4,28 @@ import { Order, SerializedOrder, StoredOrderData } from '@/types/order';
 
 const STORAGE_KEY = 'blinkit_orders_v1';
 
+function dedupeSerializedOrders(orders: SerializedOrder[]): SerializedOrder[] {
+  const seen = new Set<string>();
+  const deduped: SerializedOrder[] = [];
+
+  for (const order of orders) {
+    if (seen.has(order.id)) continue;
+    seen.add(order.id);
+    deduped.push(order);
+  }
+
+  return deduped;
+}
+
 export async function loadOrders(): Promise<StoredOrderData | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredOrderData;
+    const parsed = JSON.parse(raw) as StoredOrderData;
+    return {
+      ...parsed,
+      orders: dedupeSerializedOrders(parsed.orders ?? []),
+    };
   } catch {
     return null;
   }
@@ -22,7 +39,7 @@ export async function mergeOrders(
   newRaw: Array<{ rawAmount: string; rawDate: string }>
 ): Promise<{ added: number; total: number }> {
   const stored = await loadOrders();
-  const existing: SerializedOrder[] = stored?.orders ?? [];
+  const existing: SerializedOrder[] = dedupeSerializedOrders(stored?.orders ?? []);
 
   const existingIds = new Set(existing.map((o) => o.id));
 
@@ -37,9 +54,10 @@ export async function mergeOrders(
 
     const order: Order = { id, amount, date, rawDate: raw.rawDate, rawAmount: raw.rawAmount };
     toAdd.push(serializeOrder(order));
+    existingIds.add(id);
   }
 
-  const merged = [...existing, ...toAdd];
+  const merged = dedupeSerializedOrders([...existing, ...toAdd]);
   const data: StoredOrderData = {
     orders: merged,
     lastSyncedAt: new Date().toISOString(),
