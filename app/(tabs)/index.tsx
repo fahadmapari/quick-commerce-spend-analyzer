@@ -8,11 +8,23 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+type BarRange = '3M' | '6M' | '1Y' | '2Y' | 'lifetime';
+const BAR_RANGES: { label: string; key: BarRange; months: number | null }[] = [
+  { label: '3M',       key: '3M',       months: 3  },
+  { label: '6M',       key: '6M',       months: 6  },
+  { label: '1Y',       key: '1Y',       months: 12 },
+  { label: '2Y',       key: '2Y',       months: 24 },
+  { label: 'Lifetime', key: 'lifetime', months: null },
+];
+const LIFETIME_PAGE = 12;
+
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 export default function DashboardScreen() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
+  const [barRange, setBarRange] = useState<BarRange>('1Y');
+  const [lifetimeChunk, setLifetimeChunk] = useState(LIFETIME_PAGE);
 
   useFocusEffect(
     useCallback(() => {
@@ -27,12 +39,24 @@ export default function DashboardScreen() {
   );
 
   const hasData = summary && summary.totalOrders > 0;
-  const maxMonthly = hasData
-    ? Math.max(...summary.monthlyBreakdown.map((m) => m.total))
-    : 0;
   const avgOrder = hasData
     ? Math.round(summary.lifetimeSpend / summary.totalOrders)
     : 0;
+
+  // Slice monthlyBreakdown (newest-first) for the bar chart
+  const barSliceCount = (() => {
+    if (!hasData) return 0;
+    const range = BAR_RANGES.find((r) => r.key === barRange);
+    if (!range || range.months === null) return lifetimeChunk;
+    return range.months;
+  })();
+  const barData = hasData ? summary.monthlyBreakdown.slice(0, barSliceCount) : [];
+  const hasMoreLifetime =
+    hasData && barRange === 'lifetime' && lifetimeChunk < summary.monthlyBreakdown.length;
+  const maxMonthly = barData.length > 0 ? Math.max(...barData.map((m) => m.total)) : 0;
+
+  // Line chart always shows last 12 months
+  const lineData = hasData ? summary.monthlyBreakdown.slice(0, 12) : [];
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -114,8 +138,31 @@ export default function DashboardScreen() {
                 </Pressable>
               </View>
             </View>
-            {chartMode === 'bar'
-              ? summary.monthlyBreakdown.map((m) => (
+
+            {/* Range filter — bar mode only */}
+            {chartMode === 'bar' && (
+              <View style={styles.rangeRow}>
+                {BAR_RANGES.map((r) => (
+                  <Pressable
+                    key={r.key}
+                    style={[styles.rangePill, barRange === r.key && styles.rangePillActive]}
+                    onPress={() => {
+                      setBarRange(r.key);
+                      if (r.key !== 'lifetime') setLifetimeChunk(LIFETIME_PAGE);
+                    }}
+                  >
+                    <Text style={[styles.rangePillText, barRange === r.key && styles.rangePillTextActive]}>
+                      {r.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Chart content */}
+            {chartMode === 'bar' ? (
+              <>
+                {barData.map((m) => (
                   <MonthlyBar
                     key={`${m.year}-${m.monthIndex}`}
                     month={m.month}
@@ -123,9 +170,19 @@ export default function DashboardScreen() {
                     maxAmount={maxMonthly}
                     orderCount={m.orderCount}
                   />
-                ))
-              : <MonthlyLineChart data={summary.monthlyBreakdown} />
-            }
+                ))}
+                {hasMoreLifetime && (
+                  <Pressable
+                    style={styles.showMoreBtn}
+                    onPress={() => setLifetimeChunk((c) => c + LIFETIME_PAGE)}
+                  >
+                    <Text style={styles.showMoreText}>Show more</Text>
+                  </Pressable>
+                )}
+              </>
+            ) : (
+              <MonthlyLineChart data={lineData} />
+            )}
           </View>
         </>
       ) : (
@@ -297,6 +354,48 @@ const styles = StyleSheet.create({
   },
   toggleBtnTextActive: {
     color: Colors.textPrimary,
+  },
+
+  // Range filter
+  rangeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 16,
+  },
+  rangePill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: Colors.bgBase,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  rangePillActive: {
+    backgroundColor: Colors.bgElevated,
+    borderColor: Colors.borderStrong,
+  },
+  rangePillText: {
+    fontSize: 10,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+  },
+  rangePillTextActive: {
+    color: Colors.textPrimary,
+  },
+  showMoreBtn: {
+    marginTop: 4,
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+  },
+  showMoreText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: mono,
   },
 
   // Highlight row
