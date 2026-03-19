@@ -29,10 +29,10 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
     isExtracting: false,
   };
 
-  var MAX_ATTEMPTS = 120;
-  var STABLE_THRESHOLD = 5;
-  var EXTRACTION_INITIAL_DELAY = 1800;
-  var EXTRACTION_STEP_DELAY = 1100;
+  var MAX_ATTEMPTS = 90;
+  var STABLE_THRESHOLD = 4;
+  var EXTRACTION_INITIAL_DELAY = 1200;
+  var EXTRACTION_STEP_DELAY = 700;
   var ACCOUNT_CLICK_THROTTLE = 2500;
   var DIRECT_ORDERS_NAV_THROTTLE = 2500;
 
@@ -264,14 +264,14 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
     var container = findScrollContainer();
     if (container) {
-      var step = Math.max(container.clientHeight * 0.75, 320);
+      var step = Math.max(container.clientHeight * 0.9, 420);
       var nextScrollTop = Math.min(
         container.scrollTop + step,
         container.scrollHeight
       );
       container.scrollTop = nextScrollTop;
     } else {
-      var pageStep = Math.max(window.innerHeight * 0.8, 420);
+      var pageStep = Math.max(window.innerHeight * 0.9, 520);
       window.scrollTo(0, window.scrollY + pageStep);
     }
 
