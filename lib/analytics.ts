@@ -87,7 +87,20 @@ export function computeAnalytics(orders: Order[], lastSyncedAt: string | null): 
     (a, b) => b.year - a.year || b.monthIndex - a.monthIndex
   );
 
-  return { lifetimeSpend, totalOrders: orders.length, monthlyBreakdown, lastSyncedAt };
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const last12 = monthlyBreakdown.filter(
+    (m) => new Date(m.year, m.monthIndex, 1) >= cutoff
+  );
+
+  let mostSpentMonth: MonthlySpend | null = null;
+  let leastSpentMonth: MonthlySpend | null = null;
+  if (last12.length > 0) {
+    mostSpentMonth = last12.reduce((a, b) => (b.total > a.total ? b : a));
+    leastSpentMonth = last12.reduce((a, b) => (b.total < a.total ? b : a));
+  }
+
+  return { lifetimeSpend, totalOrders: orders.length, monthlyBreakdown, lastSyncedAt, mostSpentMonth, leastSpentMonth };
 }
 
 export function formatCurrency(amount: number): string {

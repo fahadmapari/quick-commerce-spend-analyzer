@@ -34,4 +34,6 @@ export interface AnalyticsSummary {
   totalOrders: number;
   monthlyBreakdown: MonthlySpend[];
   lastSyncedAt: string | null;
+  mostSpentMonth: MonthlySpend | null;
+  leastSpentMonth: MonthlySpend | null;
 }

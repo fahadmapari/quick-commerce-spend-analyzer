@@ -70,6 +70,29 @@ export default function DashboardScreen() {
             </View>
           </View>
 
+          {/* Most / Least spent month */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Last 12 months</Text>
+              <Text style={styles.cardSubtitle}>HIGHLIGHTS</Text>
+            </View>
+            <View style={styles.highlightRow}>
+              <View style={styles.highlightItem}>
+                <Text style={styles.highlightLabel}>MOST SPENT</Text>
+                <Text style={styles.highlightMonth}>{summary.mostSpentMonth?.month ?? '—'}</Text>
+                <Text style={styles.highlightAmount}>{summary.mostSpentMonth ? formatCurrency(summary.mostSpentMonth.total) : '—'}</Text>
+                <Text style={styles.highlightOrders}>{summary.mostSpentMonth ? `${summary.mostSpentMonth.orderCount} orders` : ''}</Text>
+              </View>
+              <View style={styles.highlightDivider} />
+              <View style={styles.highlightItem}>
+                <Text style={styles.highlightLabel}>LEAST SPENT</Text>
+                <Text style={styles.highlightMonth}>{summary.leastSpentMonth?.month ?? '—'}</Text>
+                <Text style={styles.highlightAmount}>{summary.leastSpentMonth ? formatCurrency(summary.leastSpentMonth.total) : '—'}</Text>
+                <Text style={styles.highlightOrders}>{summary.leastSpentMonth ? `${summary.leastSpentMonth.orderCount} orders` : ''}</Text>
+              </View>
+            </View>
+          </View>
+
           {/* Monthly breakdown */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -233,6 +256,45 @@ const styles = StyleSheet.create({
     color: Colors.textPlaceholder,
     fontFamily: mono,
     letterSpacing: 0.8,
+  },
+
+  // Highlight row
+  highlightRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  highlightItem: {
+    flex: 1,
+    gap: 4,
+  },
+  highlightDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: Colors.borderSubtle,
+    marginHorizontal: 16,
+  },
+  highlightLabel: {
+    fontSize: 9,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+    letterSpacing: 1.2,
+  },
+  highlightMonth: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  highlightAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textHeading,
+    letterSpacing: -0.5,
+  },
+  highlightOrders: {
+    fontSize: 11,
+    color: Colors.textDisabled,
+    fontFamily: mono,
   },
 
   // Empty state
