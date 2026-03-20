@@ -5,7 +5,7 @@ import { requestBlinkitSessionReset } from '@/lib/sessionReset';
 import { clearOrders, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -30,6 +30,7 @@ export default function DashboardScreen() {
   const [lifetimeChunk, setLifetimeChunk] = useState(LIFETIME_PAGE);
   const [menuVisible, setMenuVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
@@ -144,9 +145,18 @@ export default function DashboardScreen() {
             <Text style={styles.heroLabel}>TOTAL SPENT</Text>
             <Text style={styles.heroAmount}>{formatCurrency(summary.lifetimeSpend)}</Text>
             {summary.lastSyncedAt && (
-              <View style={styles.syncRow}>
-                <Text style={styles.syncLabel}>Last sync at</Text>
-                <Text style={styles.syncDate}>{formatSyncDate(summary.lastSyncedAt)}</Text>
+              <View style={{ alignSelf: 'flex-start', gap: 6 }}>
+                <View style={styles.syncRow}>
+                  <Text style={styles.syncLabel}>Last sync at</Text>
+                  <Text style={styles.syncDate}>{formatSyncDate(summary.lastSyncedAt)}</Text>
+                </View>
+                <Pressable
+                  style={styles.syncButton}
+                  onPress={() => router.push('/explore')}
+                >
+                  <Ionicons name="sync" size={12} color={Colors.textDisabled} />
+                  <Text style={styles.syncButtonText}>Sync</Text>
+                </Pressable>
               </View>
             )}
             <View style={styles.heroStats}>
@@ -315,6 +325,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textMuted,
     fontFamily: mono,
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: Colors.bgOverlay,
+  },
+  syncButtonText: {
+    fontSize: 11,
+    fontFamily: mono,
+    color: Colors.textDisabled,
+    fontWeight: '600',
   },
   accountBtn: {
     width: 36,
