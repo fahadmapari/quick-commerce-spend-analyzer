@@ -272,12 +272,26 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
     return orders;
   }
 
+  function extractAccountIdentity() {
+    try {
+      var raw = localStorage.getItem('user');
+      if (raw) {
+        var u = JSON.parse(raw);
+        if (u.phone) return String(u.phone).replace(/\D/g, '').slice(-10);
+        if (u.id) return String(u.id);
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function finishExtraction(orders) {
     automation.isExtracting = false;
     automation.scrollAttempts = 0;
     automation.lastOrderCount = 0;
     automation.stableCount = 0;
     automation.currentExtractionTimeout = null;
+    var identity = extractAccountIdentity();
+    post({ type: 'ACCOUNT_IDENTITY', identity: identity });
     post({ type: 'ORDERS_EXTRACTED', orders: orders });
   }
 

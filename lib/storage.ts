@@ -81,6 +81,7 @@ export async function mergeOrders(
     lastSyncedAt: new Date().toISOString(),
     version: 1,
     monthlyBudget: stored?.monthlyBudget ?? null,
+    accountIdentity: stored?.accountIdentity ?? null,
   };
 
   await saveOrderData(data);
@@ -96,6 +97,29 @@ export async function getOrdersAsObjects(): Promise<{ orders: Order[]; lastSynce
   };
 }
 
+export async function getStoredAccountIdentity(): Promise<string | null> {
+  const stored = await loadOrders();
+  return stored?.accountIdentity ?? null;
+}
+
+export async function saveAccountIdentity(identity: string): Promise<void> {
+  const stored = await loadOrders();
+  await saveOrderData({
+    orders: stored?.orders ?? [],
+    lastSyncedAt: stored?.lastSyncedAt ?? new Date().toISOString(),
+    version: stored?.version ?? 1,
+    monthlyBudget: stored?.monthlyBudget ?? null,
+    accountIdentity: identity,
+  });
+}
+
+// Clears orders only — preserves gamification (XP, quests, sync history).
+// Use this for force-fetch so the user doesn't lose their progress.
+export async function clearOrdersOnly(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEY);
+}
+
+// Full wipe: orders + gamification. Use when switching accounts.
 export async function clearOrders(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
   await AsyncStorage.removeItem(GAMIFICATION_KEY);

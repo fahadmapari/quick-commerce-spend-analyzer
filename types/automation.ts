@@ -42,5 +42,9 @@ export type WebViewBridgeMessage =
       message: string;
       recoverable?: boolean;
       requiresUserAction?: boolean;
+    }
+  | {
+      type: 'ACCOUNT_IDENTITY';
+      identity: string | null;
     };
 

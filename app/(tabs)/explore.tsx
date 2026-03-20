@@ -7,11 +7,11 @@ import {
   getBlinkitSessionResetNonce,
   subscribeToBlinkitSessionReset,
 } from '@/lib/sessionReset';
-import { clearOrders, mergeOrders, getGamificationState } from '@/lib/storage';
+import { clearOrders, clearOrdersOnly, mergeOrders, getGamificationState, getStoredAccountIdentity, saveAccountIdentity } from '@/lib/storage';
 import { awardXpBatch, makeXpEvent, recordSuccessfulSync } from '@/lib/gamification';
 import { XpEvent } from '@/types/gamification';
 import { Colors } from '@/src/theme/colors';
-import { AutomationPhase, WebViewBridgeMessage } from '@/types/automation';
+import { AutomationPhase, RawOrder, WebViewBridgeMessage } from '@/types/automation';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -115,6 +115,7 @@ export default function OrdersScreen() {
   const watchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledResetNonceRef = useRef(0);
   const forceFetchRunRef = useRef(false);
+  const pendingIdentityRef = useRef<string | null>(null);
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const dotAnim = useRef(new Animated.Value(0)).current;
@@ -131,6 +132,8 @@ export default function OrdersScreen() {
   const [webViewInstanceKey, setWebViewInstanceKey] = useState(0);
   const [useIncognitoWebView, setUseIncognitoWebView] = useState(false);
   const [xpGains, setXpGains] = useState<XpEvent[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<RawOrder[] | null>(null);
+  const [showAccountSwitchModal, setShowAccountSwitchModal] = useState(false);
 
   const showWebView = USER_INPUT_PHASES.has(phase) || (phase === 'error' && errorRequiresUserAction);
   const showOverlay = !showWebView || phase === 'success' || (phase === 'error' && !errorRequiresUserAction);
@@ -177,6 +180,9 @@ export default function OrdersScreen() {
   }, []);
 
   const startAutomationCycle = useCallback(() => {
+    pendingIdentityRef.current = null;
+    setPendingOrders(null);
+    setShowAccountSwitchModal(false);
     setSyncProgress(null);
     setSyncResult(null);
     setErrorMessage(null);
@@ -229,7 +235,7 @@ export default function OrdersScreen() {
   }, [startAutomationCycle]);
 
   const handleForceFetch = useCallback(async () => {
-    await clearOrders();
+    await clearOrdersOnly();
     forceFetchRunRef.current = true;
     setSyncResult(null);
     setSyncProgress(null);
@@ -353,6 +359,11 @@ export default function OrdersScreen() {
         return;
       }
 
+      if (data.type === 'ACCOUNT_IDENTITY') {
+        pendingIdentityRef.current = data.identity;
+        return;
+      }
+
       if (data.type === 'SCROLL_PROGRESS') {
         setSyncProgress(data.count);
         transitionTo('extracting', `Scanning ${data.count} orders`);
@@ -362,7 +373,18 @@ export default function OrdersScreen() {
       if (data.type === 'ORDERS_EXTRACTED') {
         clearWatchdog();
         setSyncProgress(null);
+
+        const incomingIdentity = pendingIdentityRef.current;
+        const storedIdentity = await getStoredAccountIdentity();
+
+        if (incomingIdentity && storedIdentity && incomingIdentity !== storedIdentity) {
+          setPendingOrders(data.orders);
+          setShowAccountSwitchModal(true);
+          return;
+        }
+
         const { added, total } = await mergeOrders(data.orders);
+        if (incomingIdentity) await saveAccountIdentity(incomingIdentity);
         const summary = forceFetchRunRef.current
           ? `Fetched ${total} order${total === 1 ? '' : 's'} from scratch`
           : `Synced ${added} new order${added === 1 ? '' : 's'} (${total} total)`;
@@ -567,6 +589,65 @@ export default function OrdersScreen() {
                 </Text>
               </>
             )}
+          </View>
+        </View>
+      )}
+      {showAccountSwitchModal && (
+        <View style={styles.overlay}>
+          <View style={styles.overlayCard}>
+            <View style={styles.overlayHeader}>
+              <View style={[styles.iconBadge, styles.iconBadgeError]}>
+                <Ionicons name="swap-horizontal" size={20} color={Colors.white} />
+              </View>
+              <Text style={styles.eyebrow}>ACCOUNT CHANGE DETECTED</Text>
+              <Text style={styles.title}>Different Account</Text>
+              <Text style={styles.subtitle}>
+                The Blinkit account you're signed into is different from the one whose orders are stored here. Mixing orders from two accounts will give incorrect totals.
+              </Text>
+            </View>
+            <Pressable
+              style={styles.primaryButton}
+              onPress={async () => {
+                setShowAccountSwitchModal(false);
+                await clearOrders();
+                if (pendingOrders) {
+                  const { added, total } = await mergeOrders(pendingOrders);
+                  if (pendingIdentityRef.current) await saveAccountIdentity(pendingIdentityRef.current);
+                  const summary = `Fetched ${total} order${total === 1 ? '' : 's'} for new account`;
+                  forceFetchRunRef.current = false;
+                  setSyncResult(summary);
+                  transitionTo('success', summary);
+
+                  const today = new Date();
+                  const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                  const xpEvents: XpEvent[] = [];
+                  const gamState = await getGamificationState();
+                  if (!gamState.xpEvents.some((e) => e.id === 'sync:first_success')) {
+                    xpEvents.push(makeXpEvent('sync:first_success', 'first_sync_success', 50));
+                  }
+                  xpEvents.push(makeXpEvent(`sync:daily:${dateKey}`, 'daily_sync_success', 10, { date: dateKey }));
+                  if (added > 0) {
+                    xpEvents.push(makeXpEvent(`sync:new_orders:${dateKey}`, 'sync_with_new_orders', 15, { added, date: dateKey }));
+                  }
+                  const { awarded } = await awardXpBatch(xpEvents);
+                  await recordSuccessfulSync(dateKey);
+                  if (awarded.length > 0) setXpGains(awarded);
+                }
+                setPendingOrders(null);
+              }}
+            >
+              <Text style={styles.primaryButtonText}>Clear old data and sync</Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButton}
+              onPress={() => {
+                setShowAccountSwitchModal(false);
+                setPendingOrders(null);
+                transitionTo('success', 'Sync cancelled — old data preserved');
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Cancel — keep old data</Text>
+            </Pressable>
           </View>
         </View>
       )}

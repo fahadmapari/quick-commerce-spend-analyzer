@@ -19,6 +19,7 @@ export interface StoredOrderData {
   lastSyncedAt: string; // ISO string
   version: number; // schema version, currently 1
   monthlyBudget?: number | null;
+  accountIdentity?: string | null; // phone number (10 digits) or numeric user ID of the logged-in Blinkit account
 }
 
 // Orders are serialized with date as ISO string for JSON storage
