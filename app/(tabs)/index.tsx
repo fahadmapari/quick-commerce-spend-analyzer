@@ -327,6 +327,7 @@ const styles = StyleSheet.create({
     fontFamily: mono,
   },
   syncButton: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
