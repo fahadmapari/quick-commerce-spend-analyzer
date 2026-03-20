@@ -22,7 +22,7 @@ export function MonthlyBar({ month, amount, maxAmount, orderCount }: MonthlyBarP
       </View>
       <View style={styles.rightCol}>
         <Text style={styles.amount}>{formatCurrency(amount)}</Text>
-        <Text style={styles.count}>{orderCount}×</Text>
+        <Text style={styles.count}>{orderCount} Orders</Text>
       </View>
     </View>
   );
@@ -55,10 +55,7 @@ const styles = StyleSheet.create({
   },
   rightCol: {
     width: 86,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-end',
   },
   amount: {
     fontSize: 12,
@@ -70,7 +67,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Colors.textDisabled,
     fontFamily: mono,
-    width: 20,
-    textAlign: 'right',
+    marginTop: 2,
   },
 });
