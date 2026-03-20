@@ -35,6 +35,23 @@ export async function saveOrderData(data: StoredOrderData): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+export async function getMonthlyBudget(): Promise<number | null> {
+  const stored = await loadOrders();
+  return stored?.monthlyBudget ?? null;
+}
+
+export async function setMonthlyBudget(monthlyBudget: number | null): Promise<void> {
+  const stored = await loadOrders();
+  const data: StoredOrderData = {
+    orders: stored?.orders ?? [],
+    lastSyncedAt: stored?.lastSyncedAt ?? new Date().toISOString(),
+    version: stored?.version ?? 1,
+    monthlyBudget,
+  };
+
+  await saveOrderData(data);
+}
+
 export async function mergeOrders(
   newRaw: Array<{ rawAmount: string; rawDate: string }>
 ): Promise<{ added: number; total: number }> {
@@ -62,6 +79,7 @@ export async function mergeOrders(
     orders: merged,
     lastSyncedAt: new Date().toISOString(),
     version: 1,
+    monthlyBudget: stored?.monthlyBudget ?? null,
   };
 
   await saveOrderData(data);

@@ -2,13 +2,13 @@ import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
 import { requestBlinkitSessionReset } from '@/lib/sessionReset';
-import { clearOrders, getOrdersAsObjects } from '@/lib/storage';
+import { clearOrders, getMonthlyBudget, getOrdersAsObjects, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 type BarRange = '3M' | '6M' | '1Y' | '2Y' | 'lifetime';
@@ -20,40 +20,90 @@ const BAR_RANGES: { label: string; key: BarRange; months: number | null }[] = [
   { label: 'Lifetime', key: 'lifetime', months: null },
 ];
 const LIFETIME_PAGE = 12;
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 export default function DashboardScreen() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [monthlyBudget, setMonthlyBudgetState] = useState<number | null>(null);
   const [chartMode, setChartMode] = useState<'bar' | 'line'>('bar');
   const [barRange, setBarRange] = useState<BarRange>('1Y');
   const [lifetimeChunk, setLifetimeChunk] = useState(LIFETIME_PAGE);
   const [menuVisible, setMenuVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
+  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
+  const [budgetError, setBudgetError] = useState('');
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        const { orders, lastSyncedAt } = await getOrdersAsObjects();
+        const [{ orders, lastSyncedAt }, storedBudget] = await Promise.all([
+          getOrdersAsObjects(),
+          getMonthlyBudget(),
+        ]);
         if (!active) return;
         setSummary(computeAnalytics(orders, lastSyncedAt));
+        setMonthlyBudgetState(storedBudget);
       })();
       return () => { active = false; };
     }, [])
   );
 
-  const hasData = summary && summary.totalOrders > 0;
-  const avgOrder = hasData
-    ? Math.round(summary.lifetimeSpend / summary.totalOrders)
+  const populatedSummary = summary && summary.totalOrders > 0 ? summary : null;
+  const hasData = populatedSummary !== null;
+  const avgOrder = populatedSummary
+    ? Math.round(populatedSummary.lifetimeSpend / populatedSummary.totalOrders)
     : 0;
+  const now = new Date();
+  const currentMonthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  const currentMonthSpend = populatedSummary
+    ? populatedSummary.monthlyBreakdown.find(
+      (entry) => entry.year === now.getFullYear() && entry.monthIndex === now.getMonth()
+    )?.total ?? 0
+    : 0;
+  const budgetProgress = monthlyBudget ? Math.min(currentMonthSpend / monthlyBudget, 1) : 0;
+  const budgetPercent = monthlyBudget ? Math.round((currentMonthSpend / monthlyBudget) * 100) : 0;
+  const isOverBudget = monthlyBudget !== null && currentMonthSpend > monthlyBudget;
+  const remainingBudget = monthlyBudget !== null ? monthlyBudget - currentMonthSpend : null;
 
   const handleClearData = async () => {
     await clearOrders();
     await requestBlinkitSessionReset();
     setSummary(null);
+    setMonthlyBudgetState(null);
     setConfirmVisible(false);
+  };
+
+  const openBudgetModal = () => {
+    setBudgetInput(monthlyBudget ? String(monthlyBudget) : '');
+    setBudgetError('');
+    setBudgetModalVisible(true);
+  };
+
+  const handleSaveBudget = async () => {
+    const parsed = parseInt(budgetInput.replace(/,/g, '').trim(), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setBudgetError('Enter a valid monthly budget in rupees.');
+      return;
+    }
+
+    await saveMonthlyBudget(parsed);
+    setMonthlyBudgetState(parsed);
+    setBudgetError('');
+    setBudgetModalVisible(false);
+  };
+
+  const handleRemoveBudget = async () => {
+    await saveMonthlyBudget(null);
+    setMonthlyBudgetState(null);
+    setBudgetInput('');
+    setBudgetError('');
+    setBudgetModalVisible(false);
   };
 
   // Slice monthlyBreakdown (newest-first) for the bar chart
@@ -63,13 +113,13 @@ export default function DashboardScreen() {
     if (!range || range.months === null) return lifetimeChunk;
     return range.months;
   })();
-  const barData = hasData ? summary.monthlyBreakdown.slice(0, barSliceCount) : [];
+  const barData = populatedSummary ? populatedSummary.monthlyBreakdown.slice(0, barSliceCount) : [];
   const hasMoreLifetime =
-    hasData && barRange === 'lifetime' && lifetimeChunk < summary.monthlyBreakdown.length;
+    populatedSummary !== null && barRange === 'lifetime' && lifetimeChunk < populatedSummary.monthlyBreakdown.length;
   const maxMonthly = barData.length > 0 ? Math.max(...barData.map((m) => m.total)) : 0;
 
   // Line chart always shows last 12 months
-  const lineData = hasData ? summary.monthlyBreakdown.slice(0, 12) : [];
+  const lineData = populatedSummary ? populatedSummary.monthlyBreakdown.slice(0, 12) : [];
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -129,7 +179,44 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
-      {hasData ? (
+      <Modal transparent visible={budgetModalVisible} animationType="fade" onRequestClose={() => setBudgetModalVisible(false)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>{monthlyBudget ? 'Edit monthly budget' : 'Set monthly budget'}</Text>
+            <Text style={styles.confirmBody}>
+              Enter the amount you want to stay within for Blinkit this month.
+            </Text>
+            <TextInput
+              value={budgetInput}
+              onChangeText={(text) => {
+                setBudgetInput(text.replace(/[^\d]/g, ''));
+                if (budgetError) setBudgetError('');
+              }}
+              placeholder="15000"
+              placeholderTextColor={Colors.textPlaceholder}
+              keyboardType="number-pad"
+              autoFocus
+              style={styles.budgetInput}
+            />
+            {budgetError ? <Text style={styles.budgetError}>{budgetError}</Text> : null}
+            <View style={styles.confirmActions}>
+              <Pressable style={styles.confirmCancel} onPress={() => setBudgetModalVisible(false)}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.budgetSaveButton} onPress={handleSaveBudget}>
+                <Text style={styles.confirmDeleteText}>Save budget</Text>
+              </Pressable>
+            </View>
+            {monthlyBudget !== null ? (
+              <Pressable style={styles.budgetRemoveButton} onPress={handleRemoveBudget}>
+                <Text style={styles.budgetRemoveText}>Remove budget</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      {populatedSummary ? (
         <>
           {/* Hero spend card */}
           <View style={styles.heroCard}>
@@ -143,12 +230,12 @@ export default function DashboardScreen() {
               <Rect width="100%" height="100%" fill="url(#grid)" rx="20" />
             </Svg>
             <Text style={styles.heroLabel}>TOTAL SPENT</Text>
-            <Text style={styles.heroAmount}>{formatCurrency(summary.lifetimeSpend)}</Text>
-            {summary.lastSyncedAt && (
+            <Text style={styles.heroAmount}>{formatCurrency(populatedSummary.lifetimeSpend)}</Text>
+            {populatedSummary.lastSyncedAt && (
               <View style={{ alignSelf: 'flex-start', gap: 6 }}>
                 <View style={styles.syncRow}>
                   <Text style={styles.syncLabel}>Last sync at</Text>
-                  <Text style={styles.syncDate}>{formatSyncDate(summary.lastSyncedAt)}</Text>
+                  <Text style={styles.syncDate}>{formatSyncDate(populatedSummary.lastSyncedAt)}</Text>
                 </View>
                 <Pressable
                   style={styles.syncButton}
@@ -162,13 +249,66 @@ export default function DashboardScreen() {
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
                 <Text style={styles.heroStatLabel}>ORDERS</Text>
-                <Text style={styles.heroStatValue}>{summary.totalOrders}</Text>
+                <Text style={styles.heroStatValue}>{populatedSummary.totalOrders}</Text>
               </View>
               <View style={styles.heroStatDivider} />
               <View style={styles.heroStat}>
                 <Text style={styles.heroStatLabel}>AVG ORDER</Text>
                 <Text style={styles.heroStatValue}>{formatCurrency(avgOrder)}</Text>
               </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.budgetHeader}>
+              <View style={styles.budgetHeaderCopy}>
+                <Text style={styles.cardSubtitle}>MONTHLY BUDGET</Text>
+                <Text style={styles.cardTitle}>{currentMonthLabel}</Text>
+              </View>
+              <Pressable style={styles.budgetEditButton} onPress={openBudgetModal}>
+                <Text style={styles.budgetEditButtonText}>{monthlyBudget !== null ? 'Edit budget' : 'Set budget'}</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.budgetValuesRow}>
+              <View style={styles.budgetValueBlock}>
+                <Text style={styles.budgetValueLabel}>Current spend</Text>
+                <Text style={styles.budgetCurrentSpend}>{formatCurrency(currentMonthSpend)}</Text>
+              </View>
+              <View style={styles.highlightDivider} />
+              <View style={styles.budgetValueBlock}>
+                <Text style={styles.budgetValueLabel}>Set budget</Text>
+                <Text style={[styles.budgetBudgetValue, monthlyBudget === null && styles.budgetBudgetValueEmpty]}>
+                  {monthlyBudget !== null ? formatCurrency(monthlyBudget) : 'Not set'}
+                </Text>
+              </View>
+            </View>
+
+            {monthlyBudget !== null ? (
+              <View style={styles.budgetMetaRow}>
+                <Text style={[styles.budgetMetaText, isOverBudget && styles.budgetMetaTextOver]}>
+                  {isOverBudget
+                    ? `${formatCurrency(currentMonthSpend - monthlyBudget)} over budget`
+                    : `${formatCurrency(Math.max(remainingBudget ?? 0, 0))} left this month`}
+                </Text>
+                <Text style={[styles.budgetMetaPercent, isOverBudget && styles.budgetMetaTextOver]}>
+                  {budgetPercent}% used
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.budgetEmptyText}>
+                Set a budget to track how much of this month&apos;s spending has already been used.
+              </Text>
+            )}
+
+            <View style={styles.budgetProgressTrack}>
+              <View
+                style={[
+                  styles.budgetProgressFill,
+                  { width: `${budgetProgress * 100}%` },
+                  monthlyBudget !== null && (isOverBudget ? styles.budgetProgressFillOver : styles.budgetProgressFillActive),
+                ]}
+              />
             </View>
           </View>
 
@@ -181,16 +321,16 @@ export default function DashboardScreen() {
             <View style={styles.highlightRow}>
               <View style={styles.highlightItem}>
                 <Text style={styles.highlightLabel}>MOST SPENT</Text>
-                <Text style={styles.highlightMonth}>{summary.mostSpentMonth?.month ?? '—'}</Text>
-                <Text style={styles.highlightAmount}>{summary.mostSpentMonth ? formatCurrency(summary.mostSpentMonth.total) : '—'}</Text>
-                <Text style={styles.highlightOrders}>{summary.mostSpentMonth ? `${summary.mostSpentMonth.orderCount} orders` : ''}</Text>
+                <Text style={styles.highlightMonth}>{populatedSummary.mostSpentMonth?.month ?? '—'}</Text>
+                <Text style={styles.highlightAmount}>{populatedSummary.mostSpentMonth ? formatCurrency(populatedSummary.mostSpentMonth.total) : '—'}</Text>
+                <Text style={styles.highlightOrders}>{populatedSummary.mostSpentMonth ? `${populatedSummary.mostSpentMonth.orderCount} orders` : ''}</Text>
               </View>
               <View style={styles.highlightDivider} />
               <View style={styles.highlightItem}>
                 <Text style={styles.highlightLabel}>LEAST SPENT</Text>
-                <Text style={styles.highlightMonth}>{summary.leastSpentMonth?.month ?? '—'}</Text>
-                <Text style={styles.highlightAmount}>{summary.leastSpentMonth ? formatCurrency(summary.leastSpentMonth.total) : '—'}</Text>
-                <Text style={styles.highlightOrders}>{summary.leastSpentMonth ? `${summary.leastSpentMonth.orderCount} orders` : ''}</Text>
+                <Text style={styles.highlightMonth}>{populatedSummary.leastSpentMonth?.month ?? '—'}</Text>
+                <Text style={styles.highlightAmount}>{populatedSummary.leastSpentMonth ? formatCurrency(populatedSummary.leastSpentMonth.total) : '—'}</Text>
+                <Text style={styles.highlightOrders}>{populatedSummary.leastSpentMonth ? `${populatedSummary.leastSpentMonth.orderCount} orders` : ''}</Text>
               </View>
             </View>
           </View>
@@ -442,6 +582,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  budgetInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgBase,
+    color: Colors.textPrimary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.6,
+  },
+  budgetError: {
+    fontSize: 12,
+    color: Colors.red,
+    marginTop: -4,
+  },
+  budgetSaveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: Colors.green,
+    alignItems: 'center',
+  },
+  budgetRemoveButton: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  budgetRemoveText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    fontFamily: mono,
+  },
 
   // Hero card
   heroCard: {
@@ -516,6 +690,108 @@ const styles = StyleSheet.create({
     color: Colors.textPlaceholder,
     fontFamily: mono,
     letterSpacing: 0.8,
+  },
+  budgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 18,
+  },
+  budgetHeaderCopy: {
+    flex: 1,
+    gap: 6,
+  },
+  budgetEditButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgBase,
+  },
+  budgetEditButtonText: {
+    fontSize: 11,
+    color: Colors.textPrimary,
+    fontFamily: mono,
+  },
+  budgetValuesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  budgetValueBlock: {
+    flex: 1,
+    gap: 6,
+  },
+  budgetValueLabel: {
+    fontSize: 10,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+    letterSpacing: 1,
+  },
+  budgetCurrentSpend: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: Colors.textHeading,
+    letterSpacing: -1,
+    lineHeight: 36,
+  },
+  budgetBudgetValue: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    letterSpacing: -0.6,
+    lineHeight: 28,
+  },
+  budgetBudgetValueEmpty: {
+    color: Colors.textMuted,
+  },
+  budgetMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 18,
+    marginBottom: 12,
+  },
+  budgetMetaText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textMuted,
+  },
+  budgetMetaTextOver: {
+    color: Colors.red,
+  },
+  budgetMetaPercent: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontFamily: mono,
+  },
+  budgetEmptyText: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    lineHeight: 19,
+    marginTop: 18,
+    marginBottom: 12,
+  },
+  budgetProgressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: Colors.bgBase,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+  },
+  budgetProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.borderStrong,
+  },
+  budgetProgressFillActive: {
+    backgroundColor: Colors.green,
+  },
+  budgetProgressFillOver: {
+    backgroundColor: Colors.red,
   },
   chartToggle: {
     flexDirection: 'row',

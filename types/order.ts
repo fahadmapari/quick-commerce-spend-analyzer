@@ -18,6 +18,7 @@ export interface StoredOrderData {
   orders: SerializedOrder[];
   lastSyncedAt: string; // ISO string
   version: number; // schema version, currently 1
+  monthlyBudget?: number | null;
 }
 
 // Orders are serialized with date as ISO string for JSON storage
