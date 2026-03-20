@@ -5,7 +5,7 @@ import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
 import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent } from '@/lib/gamification';
 import { ensureMonthlyQuests, refreshQuestProgress, awardCompletedQuestXp, QuestProgressInputs } from '@/lib/quests';
 import { requestBlinkitSessionReset } from '@/lib/sessionReset';
-import { clearOrders, getGamificationState, getMonthlyBudget, getOrdersAsObjects, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
+import { clearOrders, getGamificationState, getMonthlyBudget, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
 import { GamificationState, MonthlyQuest, XpEvent } from '@/types/gamification';
@@ -63,19 +63,22 @@ export default function DashboardScreen() {
   const [levelCardExpanded, setLevelCardExpanded] = useState(false);
   const [levelUpVisible, setLevelUpVisible] = useState(false);
   const [newLevel, setNewLevel] = useState(0);
+  const [accountIdentity, setAccountIdentity] = useState<string | null>(null);
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        const [{ orders, lastSyncedAt }, storedBudget] = await Promise.all([
+        const [{ orders, lastSyncedAt }, storedBudget, identity] = await Promise.all([
           getOrdersAsObjects(),
           getMonthlyBudget(),
+          getStoredAccountIdentity(),
         ]);
         if (!active) return;
         setSummary(computeAnalytics(orders, lastSyncedAt));
         setMonthlyBudgetState(storedBudget);
+        setAccountIdentity(identity);
 
         // ── Gamification ──
         const now = new Date();
@@ -263,6 +266,14 @@ export default function DashboardScreen() {
       <Modal transparent visible={menuVisible} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
           <View style={styles.menuCard}>
+            {accountIdentity && (
+              <View style={styles.menuAccountRow}>
+                <Ionicons name="person-circle-outline" size={15} color={Colors.textMuted} />
+                <Text style={styles.menuAccountText}>
+                  +91 {accountIdentity.slice(0, 5)} {accountIdentity.slice(5)}
+                </Text>
+              </View>
+            )}
             <Pressable
               style={styles.menuItem}
               onPress={() => {
@@ -747,6 +758,20 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 10,
+  },
+  menuAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  menuAccountText: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '500',
   },
   menuItem: {
     paddingVertical: 12,
