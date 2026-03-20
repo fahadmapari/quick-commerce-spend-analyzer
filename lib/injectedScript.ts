@@ -114,6 +114,16 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
     return null;
   }
 
+  function findVisibleSelector(selector) {
+    var nodes = document.querySelectorAll(selector);
+    for (var i = 0; i < nodes.length; i++) {
+      if (isVisible(nodes[i])) {
+        return nodes[i];
+      }
+    }
+    return null;
+  }
+
   function closestClickable(node) {
     if (!node) return null;
     return node.closest('button, a, [role="button"], [tabindex], div') || node;
@@ -136,7 +146,21 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
   }
 
   function findLocationModal() {
-    return findByText(/select your location/);
+    var modalRoot = findVisibleSelector(
+      '[class*="GetLocationModal__GetLocationContainer"], [class*="GetLocationModal__LocationContainer"], [aria-modal="true"]'
+    );
+    var useMyLocation = findUseMyLocationButton();
+    var selectManually = closestClickable(findByText(/select manually/));
+    if (modalRoot && (useMyLocation || selectManually)) {
+      return modalRoot;
+    }
+
+    var heading = findByText(/select your location/);
+    if (heading && (useMyLocation || selectManually)) {
+      return heading;
+    }
+
+    return null;
   }
 
   function findUseMyLocationButton() {
@@ -144,11 +168,13 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
   }
 
   function findPhoneInput() {
-    return document.querySelector('[data-test-id="phone-no-text-box"]');
+    var input = document.querySelector('[data-test-id="phone-no-text-box"]');
+    return isVisible(input) ? input : null;
   }
 
   function findOtpInput() {
-    return document.querySelector('[data-test-id="otp-text-box"]');
+    var input = document.querySelector('[data-test-id="otp-text-box"]');
+    return isVisible(input) ? input : null;
   }
 
   function findOrderHistoryOption() {
@@ -348,7 +374,6 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
   function handleKnownStates() {
     if (handleDownloadModal()) return true;
-    if (handleLocationModal()) return true;
 
     if (findOtpInput()) {
       emitState('awaiting_otp', 'Enter OTP to continue');
@@ -359,6 +384,8 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
       emitState('awaiting_phone', 'Enter mobile number to continue');
       return true;
     }
+
+    if (handleLocationModal()) return true;
 
     if (isOrdersPage()) {
       if (automation.extractionStartedForUrl !== window.location.href) {
