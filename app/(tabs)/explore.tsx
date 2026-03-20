@@ -23,15 +23,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import * as Location from 'expo-location';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView, { WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
 
 const BLINKIT_URL = 'https://blinkit.com';
 const WATCHDOG_MS = 30000;
-const LOCATION_FALLBACK_MS = 8000;
 
 const USER_INPUT_PHASES = new Set<AutomationPhase>([
+  'requesting_location_permission',
   'awaiting_phone',
   'awaiting_otp',
   'awaiting_manual_location',
@@ -40,7 +39,6 @@ const USER_INPUT_PHASES = new Set<AutomationPhase>([
 const AUTOMATED_PHASES = new Set<AutomationPhase>([
   'booting',
   'checking_session',
-  'requesting_location_permission',
   'navigating_to_orders',
   'extracting',
 ]);
@@ -52,7 +50,7 @@ function getPhaseTitle(phase: AutomationPhase): string {
     case 'checking_session':
       return 'Checking your account';
     case 'requesting_location_permission':
-      return 'Confirming your location';
+      return 'Share your location';
     case 'awaiting_phone':
       return 'Enter mobile number';
     case 'awaiting_otp':
@@ -95,6 +93,10 @@ function getPhaseSubtitle(
     return 'The WebView is visible so you can select the delivery location manually and we will continue automatically.';
   }
 
+  if (phase === 'requesting_location_permission') {
+    return 'The WebView is visible so you can tap "Use my location" and allow the browser prompt, or choose manual location if you prefer.';
+  }
+
   if (phase === 'awaiting_phone') {
     return 'The WebView is visible so you can enter the Blinkit mobile number. We will take over again right after that.';
   }
@@ -109,8 +111,6 @@ function getPhaseSubtitle(
 export default function OrdersScreen() {
   const webViewRef = useRef<WebView>(null);
   const watchdogTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const locationFallbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const requestingLocationRef = useRef(false);
   const handledResetNonceRef = useRef(0);
   const forceFetchRunRef = useRef(false);
 
@@ -125,7 +125,6 @@ export default function OrdersScreen() {
   const [errorRequiresUserAction, setErrorRequiresUserAction] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(BLINKIT_URL);
   const [webViewLoaded, setWebViewLoaded] = useState(false);
-  const [androidGeolocationEnabled, setAndroidGeolocationEnabled] = useState(false);
   const [manualLocationMode, setManualLocationMode] = useState(false);
   const [webViewInstanceKey, setWebViewInstanceKey] = useState(0);
   const [useIncognitoWebView, setUseIncognitoWebView] = useState(false);
@@ -146,13 +145,6 @@ export default function OrdersScreen() {
     }
   }, []);
 
-  const clearLocationFallback = useCallback(() => {
-    if (locationFallbackTimeoutRef.current) {
-      clearTimeout(locationFallbackTimeoutRef.current);
-      locationFallbackTimeoutRef.current = null;
-    }
-  }, []);
-
   const transitionTo = useCallback(
     (nextPhase: AutomationPhase, detail?: string | null) => {
       setPhase(nextPhase);
@@ -169,12 +161,8 @@ export default function OrdersScreen() {
           setPhase('error');
         }, WATCHDOG_MS);
       }
-
-      if (nextPhase !== 'requesting_location_permission') {
-        clearLocationFallback();
-      }
     },
-    [clearLocationFallback, clearWatchdog]
+    [clearWatchdog]
   );
 
   const injectAutomationBridge = useCallback((command?: object) => {
@@ -186,8 +174,6 @@ export default function OrdersScreen() {
   }, []);
 
   const startAutomationCycle = useCallback(() => {
-    requestingLocationRef.current = false;
-    clearLocationFallback();
     setSyncProgress(null);
     setSyncResult(null);
     setErrorMessage(null);
@@ -198,17 +184,14 @@ export default function OrdersScreen() {
     if (webViewLoaded) {
       injectAutomationBridge({ type: 'RESTART_AUTOMATION' });
     }
-  }, [clearLocationFallback, injectAutomationBridge, transitionTo, webViewLoaded]);
+  }, [injectAutomationBridge, transitionTo, webViewLoaded]);
 
   const performWebViewSessionReset = useCallback((nonce: number) => {
     if (nonce <= handledResetNonceRef.current) return;
     handledResetNonceRef.current = nonce;
 
-    requestingLocationRef.current = false;
     clearWatchdog();
-    clearLocationFallback();
     setManualLocationMode(false);
-    setAndroidGeolocationEnabled(false);
     setSyncProgress(null);
     setSyncResult(null);
     setErrorMessage(null);
@@ -225,7 +208,7 @@ export default function OrdersScreen() {
     setWebViewLoaded(false);
     setWebViewInstanceKey(nonce);
     transitionTo('booting', 'Resetting Blinkit session');
-  }, [clearLocationFallback, clearWatchdog, transitionTo]);
+  }, [clearWatchdog, transitionTo]);
 
   const handleManualLocationFallback = useCallback((reason: string) => {
     setErrorMessage(null);
@@ -234,57 +217,6 @@ export default function OrdersScreen() {
     injectAutomationBridge({ type: 'ENTER_MANUAL_LOCATION_MODE' });
     transitionTo('awaiting_manual_location', reason);
   }, [injectAutomationBridge, transitionTo]);
-
-  const handleLocationPermissionRequired = useCallback(async () => {
-    if (requestingLocationRef.current || manualLocationMode) return;
-    requestingLocationRef.current = true;
-
-    transitionTo('requesting_location_permission', 'Waiting for location permission');
-    clearLocationFallback();
-    locationFallbackTimeoutRef.current = setTimeout(() => {
-      handleManualLocationFallback('Location could not be selected automatically');
-    }, LOCATION_FALLBACK_MS);
-
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      const granted = permission.granted;
-
-      if (granted) {
-        if (Platform.OS === 'android') {
-          setAndroidGeolocationEnabled(true);
-        }
-
-        setTimeout(() => {
-          injectAutomationBridge({
-            type: 'LOCATION_PERMISSION_RESULT',
-            granted: true,
-          });
-        }, Platform.OS === 'android' ? 350 : 100);
-      } else {
-        clearLocationFallback();
-        handleManualLocationFallback('Location permission was denied');
-        injectAutomationBridge({
-          type: 'LOCATION_PERMISSION_RESULT',
-          granted: false,
-        });
-      }
-    } catch (error) {
-      clearLocationFallback();
-      handleManualLocationFallback('Location permission could not be completed');
-      injectAutomationBridge({
-        type: 'LOCATION_PERMISSION_RESULT',
-        granted: false,
-      });
-    } finally {
-      requestingLocationRef.current = false;
-    }
-  }, [
-    clearLocationFallback,
-    handleManualLocationFallback,
-    injectAutomationBridge,
-    manualLocationMode,
-    transitionTo,
-  ]);
 
   const handleRetry = useCallback(() => {
     if (webViewRef.current) {
@@ -352,9 +284,8 @@ export default function OrdersScreen() {
       progressLoop.stop();
       dotsLoop.stop();
       clearWatchdog();
-      clearLocationFallback();
     };
-  }, [clearLocationFallback, clearWatchdog, dotAnim, progressAnim]);
+  }, [clearWatchdog, dotAnim, progressAnim]);
 
   const onNavigationStateChange = (navState: WebViewNavigation) => {
     setCurrentUrl(navState.url);
@@ -406,7 +337,11 @@ export default function OrdersScreen() {
       }
 
       if (data.type === 'LOCATION_PERMISSION_REQUIRED') {
-        await handleLocationPermissionRequired();
+        setManualLocationMode(false);
+        transitionTo(
+          'requesting_location_permission',
+          'Tap "Use my location" and allow the browser prompt, or select manually.'
+        );
         return;
       }
 
@@ -422,7 +357,6 @@ export default function OrdersScreen() {
       }
 
       if (data.type === 'ORDERS_EXTRACTED') {
-        clearLocationFallback();
         clearWatchdog();
         setSyncProgress(null);
         const { added, total } = await mergeOrders(data.orders);
@@ -436,15 +370,13 @@ export default function OrdersScreen() {
       }
 
       if (data.type === 'AUTOMATION_ERROR') {
-        clearLocationFallback();
         clearWatchdog();
         forceFetchRunRef.current = false;
         setErrorRequiresUserAction(Boolean(data.requiresUserAction));
         setErrorMessage(data.message);
         transitionTo('error', data.message);
       }
-    } catch (error) {
-      clearLocationFallback();
+    } catch {
       clearWatchdog();
       forceFetchRunRef.current = false;
       setErrorRequiresUserAction(false);
@@ -472,7 +404,16 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.webViewFrame}>
+      {showWebView && (
+        <View style={styles.guidanceContainer}>
+          <View style={styles.guidanceBanner}>
+            <Text style={styles.guidanceTitle}>{phaseTitle}</Text>
+            <Text style={styles.guidanceBody}>{phaseSubtitle}</Text>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.webViewFrame} pointerEvents={showWebView ? 'auto' : 'none'}>
         <WebView
           key={webViewInstanceKey}
           ref={webViewRef}
@@ -480,7 +421,7 @@ export default function OrdersScreen() {
           style={[styles.webView, !showWebView && styles.hiddenWebView]}
           javaScriptEnabled
           incognito={useIncognitoWebView}
-          geolocationEnabled={Platform.OS === 'android' ? androidGeolocationEnabled : false}
+          geolocationEnabled={Platform.OS === 'android'}
           startInLoadingState
           injectedJavaScriptBeforeContentLoaded={AUTOMATION_BRIDGE_SCRIPT}
           renderLoading={() => (
@@ -584,13 +525,6 @@ export default function OrdersScreen() {
               </>
             )}
           </View>
-        </View>
-      )}
-
-      {showWebView && (
-        <View style={styles.guidanceBanner}>
-          <Text style={styles.guidanceTitle}>{phaseTitle}</Text>
-          <Text style={styles.guidanceBody}>{phaseSubtitle}</Text>
         </View>
       )}
     </SafeAreaView>
@@ -761,11 +695,13 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
   },
+  guidanceContainer: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 8,
+    backgroundColor: Colors.bgBase,
+  },
   guidanceBanner: {
-    position: 'absolute',
-    top: 10,
-    left: 12,
-    right: 12,
     borderRadius: 18,
     backgroundColor: 'rgba(13, 13, 13, 0.94)',
     borderWidth: 1,

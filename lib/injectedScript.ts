@@ -12,7 +12,6 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
   var automation = {
     locationPermissionRequested: false,
-    locationPermissionGranted: false,
     manualLocationMode: false,
     lastAccountClickAt: 0,
     lastDirectOrdersNavAt: 0,
@@ -188,7 +187,7 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
   }
 
   function notifyLocationPermissionRequired() {
-    emitState('requesting_location_permission', 'Waiting for location permission');
+    emitState('requesting_location_permission', 'Use Blinkit location or select manually');
     if (automation.locationPermissionRequested) return;
     automation.locationPermissionRequested = true;
     post({ type: 'LOCATION_PERMISSION_REQUIRED' });
@@ -333,15 +332,9 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
       return true;
     }
 
-    if (!automation.locationPermissionGranted) {
-      notifyLocationPermissionRequired();
-      return true;
-    }
-
     var useMyLocation = findUseMyLocationButton();
     if (useMyLocation) {
-      emitState('requesting_location_permission', 'Sharing your location');
-      clickElement(useMyLocation);
+      notifyLocationPermissionRequired();
       return true;
     }
 
@@ -428,25 +421,6 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
   function receiveCommand(command) {
     if (!command || !command.type) return;
 
-    if (command.type === 'LOCATION_PERMISSION_RESULT') {
-      automation.locationPermissionRequested = true;
-      automation.locationPermissionGranted = !!command.granted;
-      automation.manualLocationMode = !command.granted;
-
-      if (command.granted) {
-        emitState('requesting_location_permission', 'Permission granted');
-        window.setTimeout(runAutomation, 50);
-        return;
-      }
-
-      post({
-        type: 'LOCATION_MANUAL_REQUIRED',
-        reason: 'location_permission_denied',
-      });
-      emitState('awaiting_manual_location', 'Select location manually');
-      return;
-    }
-
     if (command.type === 'ENTER_MANUAL_LOCATION_MODE') {
       automation.manualLocationMode = true;
       emitState('awaiting_manual_location', 'Select location manually');
@@ -461,7 +435,6 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
     if (command.type === 'RESTART_AUTOMATION') {
       automation.locationPermissionRequested = false;
-      automation.locationPermissionGranted = false;
       automation.manualLocationMode = false;
       automation.lastDirectOrdersNavAt = 0;
       automation.lastStateKey = '';
