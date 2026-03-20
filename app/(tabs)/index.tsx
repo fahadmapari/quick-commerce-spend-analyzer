@@ -80,16 +80,6 @@ export default function DashboardScreen() {
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
 
-        {/* Center: sync date */}
-        {summary?.lastSyncedAt && (
-          <View style={styles.syncPill}>
-            <View style={styles.syncDot} />
-            <Text style={styles.syncPillText}>
-              {formatSyncDate(summary.lastSyncedAt)}
-            </Text>
-          </View>
-        )}
-
         {/* Right: account icon */}
         <TouchableOpacity
           style={styles.accountBtn}
@@ -143,6 +133,12 @@ export default function DashboardScreen() {
           <View style={styles.heroCard}>
             <Text style={styles.heroLabel}>TOTAL SPENT</Text>
             <Text style={styles.heroAmount}>{formatCurrency(summary.lifetimeSpend)}</Text>
+            {summary.lastSyncedAt && (
+              <View style={styles.syncRow}>
+                <Text style={styles.syncLabel}>Last sync at</Text>
+                <Text style={styles.syncDate}>{formatSyncDate(summary.lastSyncedAt)}</Text>
+              </View>
+            )}
             <View style={styles.heroStats}>
               <View style={styles.heroStat}>
                 <Text style={styles.heroStatLabel}>ORDERS</Text>
@@ -295,25 +291,18 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
-  syncPill: {
+  syncRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: Colors.bgElevated,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    marginTop: 8,
   },
-  syncDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.green,
+  syncLabel: {
+    fontSize: 12,
+    color: Colors.textDisabled,
   },
-  syncPillText: {
-    fontSize: 10,
+  syncDate: {
+    fontSize: 12,
     color: Colors.textMuted,
     fontFamily: mono,
   },
