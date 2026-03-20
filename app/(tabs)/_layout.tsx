@@ -31,17 +31,17 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="badges"
-        options={{
-          title: 'Badges',
-          tabBarIcon: ({ color }) => <Ionicons name="trophy-outline" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="explore"
         options={{
           title: 'Sync',
           tabBarIcon: ({ color }) => <Ionicons name="sync" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="badges"
+        options={{
+          title: 'Badges',
+          tabBarIcon: ({ color }) => <Ionicons name="trophy-outline" size={24} color={color} />,
         }}
       />
     </Tabs>
