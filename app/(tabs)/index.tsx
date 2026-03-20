@@ -1,6 +1,7 @@
 import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
+import { requestBlinkitSessionReset } from '@/lib/sessionReset';
 import { clearOrders, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
@@ -48,6 +49,7 @@ export default function DashboardScreen() {
 
   const handleClearData = async () => {
     await clearOrders();
+    await requestBlinkitSessionReset();
     setSummary(null);
     setConfirmVisible(false);
   };
@@ -121,7 +123,7 @@ export default function DashboardScreen() {
           <View style={styles.confirmCard}>
             <Text style={styles.confirmTitle}>Clear all data?</Text>
             <Text style={styles.confirmBody}>
-              This will permanently erase all synced orders. Only do this if you want to log in and fetch data from a new account.
+              This will erase all synced orders and reset the Blinkit web session so the current account is logged out.
             </Text>
             <View style={styles.confirmActions}>
               <Pressable style={styles.confirmCancel} onPress={() => setConfirmVisible(false)}>
@@ -248,8 +250,8 @@ export default function DashboardScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyBody}>
-            Go to the <Text style={styles.emptyAccent}>Orders</Text> tab, navigate to your
-            Blinkit order history, and tap <Text style={styles.emptyAccent}>Sync Orders</Text> to get started.
+            Go to the <Text style={styles.emptyAccent}>Sync</Text> tab, log into Blinkit if needed,
+            and we will open order history and extract your data automatically.
           </Text>
         </View>
       )}
