@@ -9,6 +9,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 
 type BarRange = '3M' | '6M' | '1Y' | '2Y' | 'lifetime';
 const BAR_RANGES: { label: string; key: BarRange; months: number | null }[] = [
@@ -131,6 +132,15 @@ export default function DashboardScreen() {
         <>
           {/* Hero spend card */}
           <View style={styles.heroCard}>
+            <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
+              <Defs>
+                <Pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+                  <Line x1="48" y1="0" x2="48" y2="48" stroke={Colors.borderSubtle} strokeWidth="0.5" />
+                  <Line x1="0" y1="48" x2="48" y2="48" stroke={Colors.borderSubtle} strokeWidth="0.5" />
+                </Pattern>
+              </Defs>
+              <Rect width="100%" height="100%" fill="url(#grid)" rx="20" />
+            </Svg>
             <Text style={styles.heroLabel}>TOTAL SPENT</Text>
             <Text style={styles.heroAmount}>{formatCurrency(summary.lifetimeSpend)}</Text>
             {summary.lastSyncedAt && (
@@ -414,6 +424,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderSubtle,
     borderRadius: 20,
     padding: 24,
+    overflow: 'hidden',
   },
   heroLabel: {
     fontSize: 10,
