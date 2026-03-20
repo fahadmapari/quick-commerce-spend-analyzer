@@ -1,9 +1,11 @@
 import { BadgeCard } from '@/components/badge-card';
 import { BadgeShareModal } from '@/components/badge-share-modal';
-import { computeBadges } from '@/lib/badges';
-import { getOrdersAsObjects } from '@/lib/storage';
+import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
+import { awardXpBatch, makeXpEvent } from '@/lib/gamification';
+import { getGamificationState, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { BadgeCategory, BadgeProgress, CATEGORY_LABELS } from '@/types/badge';
+import { XpEvent } from '@/types/gamification';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -17,6 +19,7 @@ const CATEGORY_ORDER: BadgeCategory[] = [
 export default function BadgesScreen() {
   const [badges, setBadges] = useState<BadgeProgress[]>([]);
   const [shareBadge, setShareBadge] = useState<BadgeProgress | null>(null);
+  const [xpGains, setXpGains] = useState<XpEvent[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -24,7 +27,24 @@ export default function BadgesScreen() {
       (async () => {
         const { orders } = await getOrdersAsObjects();
         if (!active) return;
-        setBadges(computeBadges(orders));
+        const computed = computeBadges(orders);
+        setBadges(computed);
+
+        // Award XP for newly unlocked badges
+        const gamState = await getGamificationState();
+        const newBadges = getNewlyUnlockedBadges(computed, gamState);
+        if (newBadges.length > 0) {
+          const events = newBadges.map((b) =>
+            makeXpEvent(
+              `badge:unlock:${b.badge.id}`,
+              'badge_unlock',
+              b.badge.xp,
+              { badgeId: b.badge.id, tier: b.badge.tier }
+            )
+          );
+          const { awarded } = await awardXpBatch(events);
+          if (active && awarded.length > 0) setXpGains(awarded);
+        }
       })();
       return () => { active = false; };
     }, [])
@@ -111,6 +131,17 @@ export default function BadgesScreen() {
             );
           })}
         </>
+      )}
+
+      {xpGains.length > 0 && (
+        <View style={styles.xpBanner}>
+          <Text style={styles.xpBannerAmount}>
+            +{xpGains.reduce((s, e) => s + e.xp, 0)} XP
+          </Text>
+          <Text style={styles.xpBannerDetail}>
+            {xpGains.length} badge{xpGains.length > 1 ? 's' : ''} unlocked
+          </Text>
+        </View>
       )}
 
       <View style={styles.footer}>
@@ -217,6 +248,27 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.borderSubtle,
     marginBottom: 24,
+  },
+  xpBanner: {
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: Colors.greenBg,
+    borderWidth: 1,
+    borderColor: Colors.greenDark,
+    alignItems: 'center',
+    gap: 2,
+  },
+  xpBannerAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.green,
+    letterSpacing: -0.3,
+  },
+  xpBannerDetail: {
+    fontSize: 11,
+    color: Colors.textMuted,
   },
   footer: {
     alignItems: 'center',

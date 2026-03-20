@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deserializeOrder, makeOrderId, parseAmount, parseDate, serializeOrder } from './analytics';
 import { Order, SerializedOrder, StoredOrderData } from '@/types/order';
+import { GamificationState } from '@/types/gamification';
 
 const STORAGE_KEY = 'blinkit_orders_v1';
 
@@ -97,4 +98,42 @@ export async function getOrdersAsObjects(): Promise<{ orders: Order[]; lastSynce
 
 export async function clearOrders(): Promise<void> {
   await AsyncStorage.removeItem(STORAGE_KEY);
+  await AsyncStorage.removeItem(GAMIFICATION_KEY);
+}
+
+// ── Gamification Storage ──────────────────────────────────────────────
+
+const GAMIFICATION_KEY = 'blinkit_gamification_v1';
+
+function defaultGamificationState(): GamificationState {
+  return {
+    version: 1,
+    totalXp: 0,
+    xpEvents: [],
+    activeQuests: [],
+    syncHistory: [],
+  };
+}
+
+export async function getGamificationState(): Promise<GamificationState> {
+  try {
+    const raw = await AsyncStorage.getItem(GAMIFICATION_KEY);
+    if (!raw) return defaultGamificationState();
+    return JSON.parse(raw) as GamificationState;
+  } catch {
+    return defaultGamificationState();
+  }
+}
+
+export async function saveGamificationState(state: GamificationState): Promise<void> {
+  await AsyncStorage.setItem(GAMIFICATION_KEY, JSON.stringify(state));
+}
+
+export async function updateGamificationState(
+  updater: (state: GamificationState) => GamificationState
+): Promise<GamificationState> {
+  const current = await getGamificationState();
+  const next = updater(current);
+  await saveGamificationState(next);
+  return next;
 }

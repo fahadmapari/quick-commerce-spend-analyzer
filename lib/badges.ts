@@ -1,43 +1,48 @@
 import { Order } from '@/types/order';
-import { BadgeCategory, BadgeDefinition, BadgeProgress } from '@/types/badge';
+import { BadgeCategory, BadgeDefinition, BadgeProgress, BadgeTier, BADGE_TIER_XP } from '@/types/badge';
+import { GamificationState } from '@/types/gamification';
+
+function t(tier: BadgeTier): { tier: BadgeTier; xp: number } {
+  return { tier, xp: BADGE_TIER_XP[tier] };
+}
 
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   // Category 1: Lifetime Spending
-  { id: 'spend_1k',   title: 'First Bite',       description: 'Spent your first ₹1,000 on Blinkit',           icon: 'cart-outline',             category: 'spending', threshold: 1000 },
-  { id: 'spend_5k',   title: 'Cart Warmer',       description: 'Crossed ₹5,000 in total spending',             icon: 'flame-outline',            category: 'spending', threshold: 5000 },
-  { id: 'spend_10k',  title: 'Pantry Stacker',    description: '₹10,000 and counting',                         icon: 'cube-outline',             category: 'spending', threshold: 10000 },
-  { id: 'spend_25k',  title: 'Grocery Guru',      description: 'A quarter lakh, all groceries',                 icon: 'school-outline',           category: 'spending', threshold: 25000 },
-  { id: 'spend_50k',  title: 'Half-Lakh Hero',    description: '₹50,000 fueling your kitchen',                  icon: 'shield-checkmark-outline', category: 'spending', threshold: 50000 },
-  { id: 'spend_1l',   title: 'Lakhpati',          description: 'Welcome to the ₹1 Lakh club',                   icon: 'diamond-outline',          category: 'spending', threshold: 100000 },
-  { id: 'spend_2_5l', title: 'Quarter Million',   description: '₹2.5L spent, zero regrets',                     icon: 'trophy-outline',           category: 'spending', threshold: 250000 },
-  { id: 'spend_5l',   title: 'Blinkit Whale',     description: 'Half a million on groceries. Respect.',          icon: 'fish-outline',             category: 'spending', threshold: 500000 },
+  { id: 'spend_1k',   title: 'First Bite',       description: 'Spent your first ₹1,000 on Blinkit',           icon: 'cart-outline',             category: 'spending', threshold: 1000,   ...t('bronze') },
+  { id: 'spend_5k',   title: 'Cart Warmer',       description: 'Crossed ₹5,000 in total spending',             icon: 'flame-outline',            category: 'spending', threshold: 5000,   ...t('bronze') },
+  { id: 'spend_10k',  title: 'Pantry Stacker',    description: '₹10,000 and counting',                         icon: 'cube-outline',             category: 'spending', threshold: 10000,  ...t('silver') },
+  { id: 'spend_25k',  title: 'Grocery Guru',      description: 'A quarter lakh, all groceries',                 icon: 'school-outline',           category: 'spending', threshold: 25000,  ...t('silver') },
+  { id: 'spend_50k',  title: 'Half-Lakh Hero',    description: '₹50,000 fueling your kitchen',                  icon: 'shield-checkmark-outline', category: 'spending', threshold: 50000,  ...t('gold') },
+  { id: 'spend_1l',   title: 'Lakhpati',          description: 'Welcome to the ₹1 Lakh club',                   icon: 'diamond-outline',          category: 'spending', threshold: 100000, ...t('gold') },
+  { id: 'spend_2_5l', title: 'Quarter Million',   description: '₹2.5L spent, zero regrets',                     icon: 'trophy-outline',           category: 'spending', threshold: 250000, ...t('platinum') },
+  { id: 'spend_5l',   title: 'Blinkit Whale',     description: 'Half a million on groceries. Respect.',          icon: 'fish-outline',             category: 'spending', threshold: 500000, ...t('platinum') },
 
   // Category 2: Order Count
-  { id: 'orders_1',   title: 'The First Drop',    description: 'Placed your very first order',                   icon: 'water-outline',       category: 'orders', threshold: 1 },
-  { id: 'orders_10',  title: 'Double Digits',     description: '10 orders deep',                                 icon: 'layers-outline',      category: 'orders', threshold: 10 },
-  { id: 'orders_50',  title: 'Frequent Blinker',  description: '50 orders! You blink, it\'s delivered',           icon: 'flash-outline',       category: 'orders', threshold: 50 },
-  { id: 'orders_100', title: 'Century Club',      description: '100 orders. That\'s commitment.',                 icon: 'ribbon-outline',      category: 'orders', threshold: 100 },
-  { id: 'orders_250', title: 'Unstoppable',       description: '250 orders and still going',                     icon: 'rocket-outline',      category: 'orders', threshold: 250 },
-  { id: 'orders_500', title: 'Legend',             description: '500 orders. Bow down.',                          icon: 'star-outline',        category: 'orders', threshold: 500 },
+  { id: 'orders_1',   title: 'The First Drop',    description: 'Placed your very first order',                   icon: 'water-outline',       category: 'orders', threshold: 1,   ...t('bronze') },
+  { id: 'orders_10',  title: 'Double Digits',     description: '10 orders deep',                                 icon: 'layers-outline',      category: 'orders', threshold: 10,  ...t('bronze') },
+  { id: 'orders_50',  title: 'Frequent Blinker',  description: '50 orders! You blink, it\'s delivered',           icon: 'flash-outline',       category: 'orders', threshold: 50,  ...t('silver') },
+  { id: 'orders_100', title: 'Century Club',      description: '100 orders. That\'s commitment.',                 icon: 'ribbon-outline',      category: 'orders', threshold: 100, ...t('gold') },
+  { id: 'orders_250', title: 'Unstoppable',       description: '250 orders and still going',                     icon: 'rocket-outline',      category: 'orders', threshold: 250, ...t('platinum') },
+  { id: 'orders_500', title: 'Legend',             description: '500 orders. Bow down.',                          icon: 'star-outline',        category: 'orders', threshold: 500, ...t('platinum') },
 
   // Category 3: Biggest Single Order
-  { id: 'single_1k',   title: 'Big Basket Energy', description: 'A single order over ₹1,000',                    icon: 'basket-outline',      category: 'single_order', threshold: 1000 },
-  { id: 'single_2_5k', title: 'Cart Overflow',     description: '₹2,500 in one shot',                            icon: 'bag-handle-outline',  category: 'single_order', threshold: 2500 },
-  { id: 'single_5k',   title: 'Mega Haul',         description: '₹5,000 single order. Party shopping?',           icon: 'airplane-outline',    category: 'single_order', threshold: 5000 },
+  { id: 'single_1k',   title: 'Big Basket Energy', description: 'A single order over ₹1,000',                    icon: 'basket-outline',      category: 'single_order', threshold: 1000, ...t('bronze') },
+  { id: 'single_2_5k', title: 'Cart Overflow',     description: '₹2,500 in one shot',                            icon: 'bag-handle-outline',  category: 'single_order', threshold: 2500, ...t('silver') },
+  { id: 'single_5k',   title: 'Mega Haul',         description: '₹5,000 single order. Party shopping?',           icon: 'airplane-outline',    category: 'single_order', threshold: 5000, ...t('gold') },
 
   // Category 4: Monthly Spending
-  { id: 'month_10k',  title: 'Monthly Muncher',   description: '₹10K gone in a single month',                    icon: 'restaurant-outline',  category: 'monthly_spend', threshold: 10000 },
-  { id: 'month_25k',  title: 'Monthly Mogul',     description: '₹25K in one month, big spender',                 icon: 'briefcase-outline',   category: 'monthly_spend', threshold: 25000 },
-  { id: 'month_50k',  title: 'Month of Madness',  description: '₹50K vanished in 30 days',                       icon: 'skull-outline',       category: 'monthly_spend', threshold: 50000 },
+  { id: 'month_10k',  title: 'Monthly Muncher',   description: '₹10K gone in a single month',                    icon: 'restaurant-outline',  category: 'monthly_spend', threshold: 10000, ...t('bronze') },
+  { id: 'month_25k',  title: 'Monthly Mogul',     description: '₹25K in one month, big spender',                 icon: 'briefcase-outline',   category: 'monthly_spend', threshold: 25000, ...t('silver') },
+  { id: 'month_50k',  title: 'Month of Madness',  description: '₹50K vanished in 30 days',                       icon: 'skull-outline',       category: 'monthly_spend', threshold: 50000, ...t('gold') },
 
   // Category 5: Streak
-  { id: 'streak_3',   title: 'Three-Peat',        description: 'Ordered 3 months in a row',                      icon: 'repeat-outline',      category: 'streak', threshold: 3 },
-  { id: 'streak_6',   title: 'Creature of Habit', description: '6 consecutive months. It\'s a lifestyle.',        icon: 'calendar-outline',    category: 'streak', threshold: 6 },
-  { id: 'streak_12',  title: 'Year-Round Blinker', description: 'Every single month for a year',                  icon: 'earth-outline',       category: 'streak', threshold: 12 },
+  { id: 'streak_3',   title: 'Three-Peat',        description: 'Ordered 3 months in a row',                      icon: 'repeat-outline',      category: 'streak', threshold: 3,  ...t('bronze') },
+  { id: 'streak_6',   title: 'Creature of Habit', description: '6 consecutive months. It\'s a lifestyle.',        icon: 'calendar-outline',    category: 'streak', threshold: 6,  ...t('silver') },
+  { id: 'streak_12',  title: 'Year-Round Blinker', description: 'Every single month for a year',                  icon: 'earth-outline',       category: 'streak', threshold: 12, ...t('gold') },
 
   // Category 6: Monthly Frequency
-  { id: 'freq_10',    title: 'Power User',        description: '10 orders in a single month',                     icon: 'speedometer-outline', category: 'frequency', threshold: 10 },
-  { id: 'freq_20',    title: 'Blinkit Addict',    description: '20 orders in one month. Seek help.',              icon: 'pulse-outline',       category: 'frequency', threshold: 20 },
+  { id: 'freq_10',    title: 'Power User',        description: '10 orders in a single month',                     icon: 'speedometer-outline', category: 'frequency', threshold: 10, ...t('silver') },
+  { id: 'freq_20',    title: 'Blinkit Addict',    description: '20 orders in one month. Seek help.',              icon: 'pulse-outline',       category: 'frequency', threshold: 20, ...t('gold') },
 ];
 
 function computeMetrics(orders: Order[]) {
@@ -102,4 +107,19 @@ export function computeBadges(orders: Order[]): BadgeProgress[] {
       current,
     };
   });
+}
+
+export function getNewlyUnlockedBadges(
+  badges: BadgeProgress[],
+  gamification: GamificationState
+): BadgeProgress[] {
+  const awardedIds = new Set(
+    gamification.xpEvents
+      .filter((e) => e.reason === 'badge_unlock')
+      .map((e) => e.id)
+  );
+
+  return badges.filter(
+    (b) => b.unlocked && !awardedIds.has(`badge:unlock:${b.badge.id}`)
+  );
 }

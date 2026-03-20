@@ -1,10 +1,14 @@
 import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
+import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
+import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent } from '@/lib/gamification';
+import { ensureMonthlyQuests, refreshQuestProgress, awardCompletedQuestXp, QuestProgressInputs } from '@/lib/quests';
 import { requestBlinkitSessionReset } from '@/lib/sessionReset';
-import { clearOrders, getMonthlyBudget, getOrdersAsObjects, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
+import { clearOrders, getGamificationState, getMonthlyBudget, getOrdersAsObjects, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { AnalyticsSummary } from '@/types/order';
+import { GamificationState, MonthlyQuest, XpEvent } from '@/types/gamification';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +29,23 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
+function xpReasonLabel(reason: string): string {
+  switch (reason) {
+    case 'first_sync_success': return 'First Sync';
+    case 'daily_sync_success': return 'Daily Sync';
+    case 'sync_with_new_orders': return 'New Orders';
+    case 'set_first_budget': return 'Budget Set';
+    case 'badge_unlock': return 'Badge';
+    case 'monthly_quest_complete': return 'Quest';
+    case 'monthly_quest_perfect_month': return 'Perfect Month';
+    case 'month_under_budget': return 'Under Budget';
+    case 'month_under_90_budget': return 'Budget Bonus';
+    case 'month_spend_lower_than_previous': return 'Spent Less';
+    case 'budget_streak': return 'Budget Streak';
+    default: return 'XP';
+  }
+}
+
 export default function DashboardScreen() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [monthlyBudget, setMonthlyBudgetState] = useState<number | null>(null);
@@ -36,6 +57,12 @@ export default function DashboardScreen() {
   const [budgetModalVisible, setBudgetModalVisible] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
   const [budgetError, setBudgetError] = useState('');
+  const [gamState, setGamState] = useState<GamificationState | null>(null);
+  const [quests, setQuests] = useState<MonthlyQuest[]>([]);
+  const [recentXp, setRecentXp] = useState<XpEvent[]>([]);
+  const [levelCardExpanded, setLevelCardExpanded] = useState(false);
+  const [levelUpVisible, setLevelUpVisible] = useState(false);
+  const [newLevel, setNewLevel] = useState(0);
   const router = useRouter();
 
   useFocusEffect(
@@ -49,6 +76,77 @@ export default function DashboardScreen() {
         if (!active) return;
         setSummary(computeAnalytics(orders, lastSyncedAt));
         setMonthlyBudgetState(storedBudget);
+
+        // ── Gamification ──
+        const now = new Date();
+        const gs = await getGamificationState();
+
+        // Backfill: first sync XP if user already has data
+        if (orders.length > 0 && !gs.xpEvents.some((e) => e.id === 'sync:first_success')) {
+          const backfillEvents: XpEvent[] = [
+            makeXpEvent('sync:first_success', 'first_sync_success', 50),
+          ];
+          // Backfill badge XP for already unlocked badges
+          const badges = computeBadges(orders);
+          const newBadges = getNewlyUnlockedBadges(badges, gs);
+          for (const b of newBadges) {
+            backfillEvents.push(
+              makeXpEvent(`badge:unlock:${b.badge.id}`, 'badge_unlock', b.badge.xp, {
+                badgeId: b.badge.id,
+                tier: b.badge.tier,
+              })
+            );
+          }
+          // First budget XP
+          if (storedBudget !== null && !gs.xpEvents.some((e) => e.id === 'budget:first_set')) {
+            backfillEvents.push(makeXpEvent('budget:first_set', 'set_first_budget', 20));
+          }
+          await awardXpBatch(backfillEvents);
+        }
+
+        // Month-end evaluations
+        await evaluateClosedMonths(now, orders, storedBudget);
+
+        // Ensure monthly quests
+        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
+        const prevMonthOrders = orders.filter(
+          (o) => o.date.getFullYear() === prevMonth.getFullYear() && o.date.getMonth() === prevMonth.getMonth()
+        );
+        const currentQuests = await ensureMonthlyQuests(now, {
+          lastMonthOrderCount: prevMonthOrders.length,
+        });
+
+        // Refresh quest progress
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const prevMonthSpend = prevMonthOrders.reduce((s, o) => s + o.amount, 0);
+        const latestGs = await getGamificationState();
+        const badges = computeBadges(orders);
+
+        const qInputs: QuestProgressInputs = {
+          orders,
+          monthlyBudget: storedBudget,
+          badges,
+          syncHistory: latestGs.syncHistory,
+          currentMonthKey: monthKey,
+          previousMonthSpend: prevMonthSpend,
+          previousMonthOrderCount: prevMonthOrders.length,
+        };
+        const updatedQuests = await refreshQuestProgress(now, qInputs);
+        await awardCompletedQuestXp(updatedQuests);
+
+        // Reload final state + check for level-up
+        const finalGs = await getGamificationState();
+        if (!active) return;
+        const currentLevel = getLevelProgress(finalGs.totalXp).level;
+        if (finalGs.lastLevelUpSeen !== undefined && currentLevel > finalGs.lastLevelUpSeen) {
+          setNewLevel(currentLevel);
+          setLevelUpVisible(true);
+        }
+        finalGs.lastLevelUpSeen = currentLevel;
+        setGamState(finalGs);
+        setQuests(updatedQuests);
+        setRecentXp(finalGs.xpEvents.slice(-5).reverse());
       })();
       return () => { active = false; };
     }, [])
@@ -92,10 +190,19 @@ export default function DashboardScreen() {
       return;
     }
 
+    const wasNull = monthlyBudget === null;
     await saveMonthlyBudget(parsed);
     setMonthlyBudgetState(parsed);
     setBudgetError('');
     setBudgetModalVisible(false);
+
+    // Award first budget XP
+    if (wasNull) {
+      const { awarded, state } = await awardXpBatch([
+        makeXpEvent('budget:first_set', 'set_first_budget', 20),
+      ]);
+      if (awarded.length > 0) setGamState(state);
+    }
   };
 
   const handleRemoveBudget = async () => {
@@ -132,14 +239,24 @@ export default function DashboardScreen() {
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
 
-        {/* Right: account icon */}
-        <TouchableOpacity
-          style={styles.accountBtn}
-          onPress={() => setMenuVisible(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="person" size={17} color={Colors.textMuted} />
-        </TouchableOpacity>
+        {/* Right: XP pill + account icon */}
+        <View style={styles.headerRight}>
+          {gamState && (
+            <View style={styles.headerXpPill}>
+              <Ionicons name="flash" size={12} color={Colors.green} />
+              <Text style={styles.headerXpPillText}>Lv.{getLevelProgress(gamState.totalXp).level}</Text>
+              <View style={styles.headerXpDot} />
+              <Text style={styles.headerXpPillText}>{gamState.totalXp} XP</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.accountBtn}
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person" size={17} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Dropdown menu */}
@@ -216,6 +333,25 @@ export default function DashboardScreen() {
         </View>
       </Modal>
 
+      {/* Level Up Modal */}
+      <Modal transparent visible={levelUpVisible} animationType="fade" onRequestClose={() => setLevelUpVisible(false)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.levelUpCard}>
+            <View style={styles.levelUpBadge}>
+              <Text style={styles.levelUpBadgeText}>{newLevel}</Text>
+            </View>
+            <Text style={styles.levelUpTitle}>Level Up!</Text>
+            <Text style={styles.levelUpName}>{getLevelName(newLevel)}</Text>
+            <Text style={styles.levelUpBody}>
+              You reached Level {newLevel}. Keep syncing and completing quests to level up.
+            </Text>
+            <Pressable style={styles.levelUpButton} onPress={() => setLevelUpVisible(false)}>
+              <Text style={styles.levelUpButtonText}>Nice!</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       {populatedSummary ? (
         <>
           {/* Hero spend card */}
@@ -258,6 +394,77 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
+
+          {/* Level + XP Card (collapsible) */}
+          {gamState && (
+            <Pressable style={styles.card} onPress={() => setLevelCardExpanded((v) => !v)}>
+              <View style={styles.levelRow}>
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelBadgeText}>{getLevelProgress(gamState.totalXp).level}</Text>
+                </View>
+                <View style={styles.levelInfo}>
+                  <Text style={styles.levelName}>{getLevelProgress(gamState.totalXp).name}</Text>
+                  <Text style={styles.levelXpText}>
+                    Level {getLevelProgress(gamState.totalXp).level}  ·  {getLevelProgress(gamState.totalXp).current} / {getLevelProgress(gamState.totalXp).needed} XP
+                  </Text>
+                </View>
+                <Ionicons
+                  name={levelCardExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={Colors.textMuted}
+                />
+              </View>
+              <View style={styles.levelProgressTrack}>
+                <View
+                  style={[
+                    styles.levelProgressFill,
+                    { width: `${Math.max(getLevelProgress(gamState.totalXp).ratio * 100, 2)}%` },
+                  ]}
+                />
+              </View>
+
+              {levelCardExpanded && (
+                <>
+                  {/* Monthly Quests */}
+                  {quests.length > 0 && (
+                    <View style={styles.questSection}>
+                      <Text style={styles.questSectionTitle}>MONTHLY QUESTS</Text>
+                      {quests.map((q) => (
+                        <View key={q.id} style={styles.questRow}>
+                          <View style={[styles.questCheck, q.completed && styles.questCheckDone]}>
+                            {q.completed && <Ionicons name="checkmark" size={11} color={Colors.white} />}
+                          </View>
+                          <View style={styles.questInfo}>
+                            <Text style={[styles.questTitle, q.completed && styles.questTitleDone]}>{q.title}</Text>
+                            <Text style={styles.questDesc}>{q.description}</Text>
+                          </View>
+                          <View style={styles.questXpPill}>
+                            <Text style={styles.questXpText}>
+                              {q.completed ? `+${q.xp}` : `${q.xp} XP`}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Recent XP Gains */}
+                  {recentXp.length > 0 && (
+                    <View style={styles.recentSection}>
+                      <Text style={styles.questSectionTitle}>RECENT</Text>
+                      <View style={styles.recentRow}>
+                        {recentXp.slice(0, 3).map((e) => (
+                          <View key={e.id} style={styles.recentChip}>
+                            <Text style={styles.recentChipText}>+{e.xp} {xpReasonLabel(e.reason)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </Pressable>
+          )}
 
           <View style={styles.card}>
             <View style={styles.budgetHeader}>
@@ -482,6 +689,34 @@ const styles = StyleSheet.create({
     color: Colors.textDisabled,
     fontWeight: '600',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerXpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: Colors.greenBg,
+    borderWidth: 1,
+    borderColor: Colors.greenDark,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  headerXpPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.green,
+    fontFamily: mono,
+  },
+  headerXpDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: Colors.greenDark,
+  },
   accountBtn: {
     width: 36,
     height: 36,
@@ -491,7 +726,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 10,
   },
 
   // Dropdown menu
@@ -896,6 +1130,205 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textDisabled,
     fontFamily: mono,
+  },
+
+  // Level up modal
+  levelUpCard: {
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.greenDark,
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    alignItems: 'center',
+    gap: 12,
+  },
+  levelUpBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.greenBg,
+    borderWidth: 2,
+    borderColor: Colors.green,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  levelUpBadgeText: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: Colors.green,
+  },
+  levelUpTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.textHeading,
+    letterSpacing: -0.5,
+  },
+  levelUpName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.green,
+    letterSpacing: -0.2,
+    marginTop: -4,
+  },
+  levelUpBody: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 21,
+  },
+  levelUpButton: {
+    marginTop: 8,
+    borderRadius: 14,
+    backgroundColor: Colors.greenDark,
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+  },
+  levelUpButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+
+  // Level card
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  levelBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.greenBg,
+    borderWidth: 1.5,
+    borderColor: Colors.greenDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelBadgeText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.green,
+  },
+  levelInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  levelName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textHeading,
+    letterSpacing: -0.3,
+  },
+  levelXpText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontFamily: mono,
+  },
+  levelProgressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: Colors.bgBase,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
+    marginBottom: 4,
+  },
+  levelProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.green,
+  },
+  questSection: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+    gap: 10,
+  },
+  questSectionTitle: {
+    fontSize: 9,
+    color: Colors.textDisabled,
+    fontFamily: mono,
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  questRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  questCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  questCheckDone: {
+    backgroundColor: Colors.greenDark,
+    borderColor: Colors.greenDark,
+  },
+  questInfo: {
+    flex: 1,
+    gap: 1,
+  },
+  questTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  questTitleDone: {
+    color: Colors.textMuted,
+    textDecorationLine: 'line-through',
+  },
+  questDesc: {
+    fontSize: 10,
+    color: Colors.textDisabled,
+  },
+  questXpPill: {
+    backgroundColor: Colors.bgBase,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  questXpText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: mono,
+    color: Colors.green,
+  },
+  recentSection: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+    gap: 8,
+  },
+  recentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  recentChip: {
+    backgroundColor: Colors.bgBase,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  recentChipText: {
+    fontSize: 10,
+    fontFamily: mono,
+    color: Colors.textMuted,
   },
 
   // Empty state

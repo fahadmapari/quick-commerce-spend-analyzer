@@ -7,7 +7,9 @@ import {
   getBlinkitSessionResetNonce,
   subscribeToBlinkitSessionReset,
 } from '@/lib/sessionReset';
-import { clearOrders, mergeOrders } from '@/lib/storage';
+import { clearOrders, mergeOrders, getGamificationState } from '@/lib/storage';
+import { awardXpBatch, makeXpEvent, recordSuccessfulSync } from '@/lib/gamification';
+import { XpEvent } from '@/types/gamification';
 import { Colors } from '@/src/theme/colors';
 import { AutomationPhase, WebViewBridgeMessage } from '@/types/automation';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,6 +130,7 @@ export default function OrdersScreen() {
   const [manualLocationMode, setManualLocationMode] = useState(false);
   const [webViewInstanceKey, setWebViewInstanceKey] = useState(0);
   const [useIncognitoWebView, setUseIncognitoWebView] = useState(false);
+  const [xpGains, setXpGains] = useState<XpEvent[]>([]);
 
   const showWebView = USER_INPUT_PHASES.has(phase) || (phase === 'error' && errorRequiresUserAction);
   const showOverlay = !showWebView || phase === 'success' || (phase === 'error' && !errorRequiresUserAction);
@@ -366,6 +369,29 @@ export default function OrdersScreen() {
         forceFetchRunRef.current = false;
         setSyncResult(summary);
         transitionTo('success', summary);
+
+        // Award sync XP
+        const today = new Date();
+        const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const xpEvents: XpEvent[] = [];
+        const gamState = await getGamificationState();
+
+        // First sync ever
+        if (!gamState.xpEvents.some((e) => e.id === 'sync:first_success')) {
+          xpEvents.push(makeXpEvent('sync:first_success', 'first_sync_success', 50));
+        }
+
+        // Daily sync
+        xpEvents.push(makeXpEvent(`sync:daily:${dateKey}`, 'daily_sync_success', 10, { date: dateKey }));
+
+        // Sync with new orders
+        if (added > 0) {
+          xpEvents.push(makeXpEvent(`sync:new_orders:${dateKey}`, 'sync_with_new_orders', 15, { added, date: dateKey }));
+        }
+
+        const { awarded } = await awardXpBatch(xpEvents);
+        await recordSuccessfulSync(dateKey);
+        if (awarded.length > 0) setXpGains(awarded);
         return;
       }
 
@@ -513,6 +539,23 @@ export default function OrdersScreen() {
 
             {phase === 'success' && (
               <>
+                {xpGains.length > 0 && (
+                  <View style={styles.xpBanner}>
+                    <Text style={styles.xpBannerAmount}>
+                      +{xpGains.reduce((s, e) => s + e.xp, 0)} XP
+                    </Text>
+                    <Text style={styles.xpBannerDetail}>
+                      {xpGains.map((e) => {
+                        switch (e.reason) {
+                          case 'first_sync_success': return 'First Sync';
+                          case 'daily_sync_success': return 'Daily Sync';
+                          case 'sync_with_new_orders': return 'New Orders';
+                          default: return 'XP';
+                        }
+                      }).join(' + ')}
+                    </Text>
+                  </View>
+                )}
                 <Pressable style={styles.primaryButton} onPress={startAutomationCycle}>
                   <Text style={styles.primaryButtonText}>Sync again</Text>
                 </Pressable>
@@ -719,5 +762,26 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
+  },
+  xpBanner: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: Colors.greenBg,
+    borderWidth: 1,
+    borderColor: Colors.greenDark,
+    alignItems: 'center',
+    gap: 2,
+  },
+  xpBannerAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.green,
+    letterSpacing: -0.3,
+  },
+  xpBannerDetail: {
+    fontSize: 11,
+    color: Colors.textMuted,
   },
 });
