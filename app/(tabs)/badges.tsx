@@ -1,4 +1,5 @@
 import { BadgeCard } from '@/components/badge-card';
+import { BadgeShareModal } from '@/components/badge-share-modal';
 import { computeBadges } from '@/lib/badges';
 import { getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
@@ -15,6 +16,7 @@ const CATEGORY_ORDER: BadgeCategory[] = [
 
 export default function BadgesScreen() {
   const [badges, setBadges] = useState<BadgeProgress[]>([]);
+  const [shareBadge, setShareBadge] = useState<BadgeProgress | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,7 +77,7 @@ export default function BadgesScreen() {
           <View style={styles.grid}>
             {unlocked.map((item) => (
               <View key={item.badge.id} style={styles.gridItem}>
-                <BadgeCard progress={item} />
+                <BadgeCard progress={item} onShare={setShareBadge} />
               </View>
             ))}
             {unlocked.length % 2 !== 0 && <View style={styles.gridItem} />}
@@ -100,7 +102,7 @@ export default function BadgesScreen() {
                 <View style={styles.grid}>
                   {items.map((item) => (
                     <View key={item.badge.id} style={styles.gridItem}>
-                      <BadgeCard progress={item} />
+                      <BadgeCard progress={item} onShare={setShareBadge} />
                     </View>
                   ))}
                   {items.length % 2 !== 0 && <View style={styles.gridItem} />}
@@ -114,6 +116,14 @@ export default function BadgesScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>Sync more orders to unlock badges</Text>
       </View>
+
+      {shareBadge && (
+        <BadgeShareModal
+          visible={!!shareBadge}
+          onClose={() => setShareBadge(null)}
+          progress={shareBadge}
+        />
+      )}
     </ScrollView>
   );
 }

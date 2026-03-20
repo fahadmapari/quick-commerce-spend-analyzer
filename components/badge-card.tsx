@@ -1,13 +1,14 @@
 import { Colors } from '@/src/theme/colors';
 import { BadgeProgress } from '@/types/badge';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatCurrency } from '@/lib/analytics';
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
 interface BadgeCardProps {
   progress: BadgeProgress;
+  onShare?: (progress: BadgeProgress) => void;
 }
 
 function formatProgress(current: number, threshold: number, category: string): string {
@@ -17,7 +18,7 @@ function formatProgress(current: number, threshold: number, category: string): s
   return `${current} / ${threshold}`;
 }
 
-export function BadgeCard({ progress }: BadgeCardProps) {
+export function BadgeCard({ progress, onShare }: BadgeCardProps) {
   const { badge, unlocked, current } = progress;
   const ratio = Math.min(current / badge.threshold, 1);
 
@@ -41,9 +42,17 @@ export function BadgeCard({ progress }: BadgeCardProps) {
       </Text>
 
       {unlocked ? (
-        <Text style={styles.description} numberOfLines={2}>
-          {badge.description}
-        </Text>
+        <>
+          <Text style={styles.description} numberOfLines={2}>
+            {badge.description}
+          </Text>
+          {onShare && (
+            <Pressable style={styles.shareButton} onPress={() => onShare(progress)}>
+              <Ionicons name="share-outline" size={13} color={Colors.green} />
+              <Text style={styles.shareButtonText}>Share</Text>
+            </Pressable>
+          )}
+        </>
       ) : (
         <>
           <Text style={styles.progressText} numberOfLines={1}>
@@ -69,6 +78,23 @@ const styles = StyleSheet.create({
     gap: 8,
     alignItems: 'center',
     minHeight: 150,
+  },
+  shareButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    backgroundColor: Colors.greenBg,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 2,
+  },
+  shareButtonText: {
+    fontSize: 10,
+    fontWeight: '700' as const,
+    fontFamily: mono,
+    color: Colors.green,
+    letterSpacing: 0.3,
   },
   cardUnlocked: {
     backgroundColor: Colors.bgCard,
