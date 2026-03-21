@@ -2,7 +2,7 @@ import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
 import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
-import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent } from '@/lib/gamification';
+import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent, xpReasonLabel } from '@/lib/gamification';
 import { ensureMonthlyQuests, refreshQuestProgress, awardCompletedQuestXp, QuestProgressInputs } from '@/lib/quests';
 import { requestBlinkitSessionReset } from '@/lib/sessionReset';
 import { clearOrders, getGamificationState, getMonthlyBudget, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
@@ -29,22 +29,6 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
-function xpReasonLabel(reason: string): string {
-  switch (reason) {
-    case 'first_sync_success': return 'First Sync';
-    case 'daily_sync_success': return 'Daily Sync';
-    case 'sync_with_new_orders': return 'New Orders';
-    case 'set_first_budget': return 'Budget Set';
-    case 'badge_unlock': return 'Badge';
-    case 'monthly_quest_complete': return 'Quest';
-    case 'monthly_quest_perfect_month': return 'Perfect Month';
-    case 'month_under_budget': return 'Under Budget';
-    case 'month_under_90_budget': return 'Budget Bonus';
-    case 'month_spend_lower_than_previous': return 'Spent Less';
-    case 'budget_streak': return 'Budget Streak';
-    default: return 'XP';
-  }
-}
 
 export default function DashboardScreen() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -245,12 +229,14 @@ export default function DashboardScreen() {
         {/* Right: XP pill + account icon */}
         <View style={styles.headerRight}>
           {gamState && (
-            <View style={styles.headerXpPill}>
-              <Ionicons name="flash" size={12} color={Colors.green} />
-              <Text style={styles.headerXpPillText}>Lv.{getLevelProgress(gamState.totalXp).level}</Text>
-              <View style={styles.headerXpDot} />
-              <Text style={styles.headerXpPillText}>{gamState.totalXp} XP</Text>
-            </View>
+            <TouchableOpacity onPress={() => router.push('/xp-level')} activeOpacity={0.75}>
+              <View style={styles.headerXpPill}>
+                <Ionicons name="flash" size={12} color={Colors.green} />
+                <Text style={styles.headerXpPillText}>Lv.{getLevelProgress(gamState.totalXp).level}</Text>
+                <View style={styles.headerXpDot} />
+                <Text style={styles.headerXpPillText}>{gamState.totalXp} XP</Text>
+              </View>
+            </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.accountBtn}
@@ -472,6 +458,15 @@ export default function DashboardScreen() {
                       </View>
                     </View>
                   )}
+
+                  {/* See full history */}
+                  <Pressable
+                    style={styles.levelSeeMore}
+                    onPress={() => router.push('/xp-level')}
+                  >
+                    <Text style={styles.levelSeeMoreText}>View full history & ways to earn</Text>
+                    <Ionicons name="chevron-forward" size={12} color={Colors.green} />
+                  </Pressable>
                 </>
               )}
             </Pressable>
@@ -1354,6 +1349,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: mono,
     color: Colors.textMuted,
+  },
+  levelSeeMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 8,
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderSubtle,
+  },
+  levelSeeMoreText: {
+    fontSize: 12,
+    color: Colors.green,
+    fontFamily: mono,
   },
 
   // Empty state

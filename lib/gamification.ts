@@ -69,6 +69,25 @@ export function getLevelProgress(totalXp: number): {
   return { level, name: getLevelName(level), current, needed, ratio: needed > 0 ? current / needed : 0 };
 }
 
+// ── XP Reason Labels ──────────────────────────────────────────────────
+
+export function xpReasonLabel(reason: string): string {
+  switch (reason) {
+    case 'first_sync_success': return 'First Sync';
+    case 'daily_sync_success': return 'Daily Sync';
+    case 'sync_with_new_orders': return 'New Orders';
+    case 'set_first_budget': return 'Budget Set';
+    case 'badge_unlock': return 'Badge';
+    case 'monthly_quest_complete': return 'Quest';
+    case 'monthly_quest_perfect_month': return 'Perfect Month';
+    case 'month_under_budget': return 'Under Budget';
+    case 'month_under_90_budget': return 'Budget Bonus';
+    case 'month_spend_lower_than_previous': return 'Spent Less';
+    case 'budget_streak': return 'Budget Streak';
+    default: return 'XP';
+  }
+}
+
 // ── Idempotent XP Ledger ──────────────────────────────────────────────
 
 export function hasXpEvent(eventId: string, state: GamificationState): boolean {
