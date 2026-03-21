@@ -2,10 +2,11 @@ import { getLevelProgress, xpReasonLabel } from '@/lib/gamification';
 import { getGamificationState } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { GamificationState, XpEvent } from '@/types/gamification';
+import { XpLevelShareModal } from '@/components/xp-level-share-modal';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
@@ -67,6 +68,7 @@ const EARN_GROUPS: EarnGroup[] = [
 
 export default function XpLevelScreen() {
   const [gamState, setGamState] = useState<GamificationState | null>(null);
+  const [shareVisible, setShareVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -113,6 +115,11 @@ export default function XpLevelScreen() {
           <Text style={styles.heroProgressLabel}>
             {progress.current} / {progress.needed} XP to Level {progress.level + 1}
           </Text>
+
+          <Pressable style={styles.shareButton} onPress={() => setShareVisible(true)}>
+            <Ionicons name="share-outline" size={13} color={Colors.green} />
+            <Text style={styles.shareButtonText}>Share</Text>
+          </Pressable>
         </View>
       )}
 
@@ -180,6 +187,21 @@ export default function XpLevelScreen() {
       ))}
 
       <View style={{ height: 40 }} />
+
+      {progress && (
+        <XpLevelShareModal
+          visible={shareVisible}
+          onClose={() => setShareVisible(false)}
+          data={{
+            level: progress.level,
+            name: progress.name,
+            totalXp: gamState!.totalXp,
+            current: progress.current,
+            needed: progress.needed,
+            ratio: progress.ratio,
+          }}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -249,6 +271,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textMuted,
     fontFamily: mono,
+  },
+  shareButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.greenBg,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 10,
+  },
+  shareButtonText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: mono,
+    color: Colors.green,
+    letterSpacing: 0.3,
   },
 
   // Section header
