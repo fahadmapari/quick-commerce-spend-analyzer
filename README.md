@@ -1,3 +1,20 @@
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 14 07" src="https://github.com/user-attachments/assets/b5045e94-a763-42c6-b0bd-d38a724130fe" />
+
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 14 55" src="https://github.com/user-attachments/assets/609a3257-b50a-413e-aee8-16508bcd0aa3" />
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 15 13" src="https://github.com/user-attachments/assets/34840c0c-af32-46df-9700-f2c0de58e9a9" />
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 15 20" src="https://github.com/user-attachments/assets/c2587428-8a05-4378-9bf4-d7e44ef24c49" />
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 15 50" src="https://github.com/user-attachments/assets/dcc5586a-bd3a-40de-a6ee-3774c2ce7834" />
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 16 16" src="https://github.com/user-attachments/assets/81613a5c-4482-4152-b234-64480156849b" />
+
+<img width="1206" height="2622" alt="Simulator Screenshot - iPhone 17 Pro - 2026-03-22 at 04 17 26" src="https://github.com/user-attachments/assets/88e6aa37-b296-4680-9f14-a1eefe37f963" />
+
+
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
