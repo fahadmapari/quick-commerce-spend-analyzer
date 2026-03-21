@@ -372,9 +372,9 @@ export default function PlatformSyncWebView({ provider, onComplete, onError, lab
     if (!gamState.xpEvents.some((e) => e.id === 'sync:first_success')) {
       xpEvents.push(makeXpEvent('sync:first_success', 'first_sync_success', 50));
     }
-    xpEvents.push(makeXpEvent(`sync:daily:${dateKey}`, 'daily_sync_success', 10, { date: dateKey }));
+    xpEvents.push(makeXpEvent(`sync:daily:${dateKey}:${provider.id}`, 'daily_sync_success', 10, { date: dateKey, platform: provider.id }));
     if (added > 0) {
-      xpEvents.push(makeXpEvent(`sync:new_orders:${dateKey}`, 'sync_with_new_orders', 15, { added, date: dateKey }));
+      xpEvents.push(makeXpEvent(`sync:new_orders:${dateKey}:${provider.id}`, 'sync_with_new_orders', 15, { added, date: dateKey, platform: provider.id }));
     }
 
     const { awarded } = await awardXpBatch(xpEvents);

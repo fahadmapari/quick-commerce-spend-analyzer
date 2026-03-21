@@ -62,9 +62,12 @@ export default function DashboardScreen() {
         if (!active) return;
         setSelectedPlatforms(platforms.length > 0 ? platforms : ALL_PLATFORMS);
 
-        // Load orders based on filter
-        const { orders, lastSyncedAt } = platformFilter === 'all'
-          ? await getAllOrdersAsObjects()
+        // Always fetch all orders for gamification (budget, XP, quests, badges)
+        const { orders: allOrders, lastSyncedAt: allSyncedAt } = await getAllOrdersAsObjects();
+
+        // Fetch display-filtered orders for analytics UI
+        const { orders: displayOrders, lastSyncedAt } = platformFilter === 'all'
+          ? { orders: allOrders, lastSyncedAt: allSyncedAt }
           : await getOrdersAsObjects(platformFilter);
 
         const [storedBudget, ...identities] = await Promise.all([
@@ -79,7 +82,7 @@ export default function DashboardScreen() {
           .filter(Boolean);
         setAccountIdentity(identityParts.length > 0 ? identityParts.join(', ') : null);
 
-        setSummary(computeAnalytics(orders, lastSyncedAt));
+        setSummary(computeAnalytics(displayOrders, lastSyncedAt));
         setMonthlyBudgetState(storedBudget);
 
         // ── Gamification ──
@@ -87,12 +90,12 @@ export default function DashboardScreen() {
         const gs = await getGamificationState();
 
         // Backfill: first sync XP if user already has data
-        if (orders.length > 0 && !gs.xpEvents.some((e) => e.id === 'sync:first_success')) {
+        if (allOrders.length > 0 && !gs.xpEvents.some((e) => e.id === 'sync:first_success')) {
           const backfillEvents: XpEvent[] = [
             makeXpEvent('sync:first_success', 'first_sync_success', 50),
           ];
           // Backfill badge XP for already unlocked badges
-          const badges = computeBadges(orders);
+          const badges = computeBadges(allOrders);
           const newBadges = getNewlyUnlockedBadges(badges, gs);
           for (const b of newBadges) {
             backfillEvents.push(
@@ -110,12 +113,12 @@ export default function DashboardScreen() {
         }
 
         // Month-end evaluations
-        await evaluateClosedMonths(now, orders, storedBudget);
+        await evaluateClosedMonths(now, allOrders, storedBudget);
 
         // Ensure monthly quests
         const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const prevMonthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
-        const prevMonthOrders = orders.filter(
+        const prevMonthOrders = allOrders.filter(
           (o) => o.date.getFullYear() === prevMonth.getFullYear() && o.date.getMonth() === prevMonth.getMonth()
         );
         const currentQuests = await ensureMonthlyQuests(now, {
@@ -126,10 +129,10 @@ export default function DashboardScreen() {
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const prevMonthSpend = prevMonthOrders.reduce((s, o) => s + o.amount, 0);
         const latestGs = await getGamificationState();
-        const badges = computeBadges(orders);
+        const badges = computeBadges(allOrders);
 
         const qInputs: QuestProgressInputs = {
-          orders,
+          orders: allOrders,
           monthlyBudget: storedBudget,
           badges,
           syncHistory: latestGs.syncHistory,

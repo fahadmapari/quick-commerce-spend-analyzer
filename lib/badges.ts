@@ -53,7 +53,7 @@ function computeMetrics(orders: Order[]) {
   // Group by month
   const byMonth = new Map<string, { total: number; count: number }>();
   for (const order of orders) {
-    const key = `${order.date.getFullYear()}-${String(order.date.getMonth()).padStart(2, '0')}`;
+    const key = `${order.date.getFullYear()}-${String(order.date.getMonth() + 1).padStart(2, '0')}`;
     const entry = byMonth.get(key) ?? { total: 0, count: 0 };
     entry.total += order.amount;
     entry.count += 1;
