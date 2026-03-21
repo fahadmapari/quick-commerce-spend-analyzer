@@ -269,34 +269,36 @@ export default function DashboardScreen() {
       </View>
 
       {/* Platform filter tabs */}
-      <View style={styles.platformTabs}>
-        {(['all', ...ALL_PLATFORMS] as const).map((id) => {
-          const isAll = id === 'all';
-          const isActive = platformFilter === id;
-          const isEnabled = isAll || selectedPlatforms.includes(id as PlatformId);
-          return (
-            <Pressable
-              key={id}
-              style={[
-                styles.platformTab,
-                isActive && styles.platformTabActive,
-                !isEnabled && styles.platformTabDisabled,
-              ]}
-              onPress={() => isEnabled && setPlatformFilter(id)}
-              disabled={!isEnabled}
-            >
-              <Text
+      <View style={styles.platformTabsContainer}>
+        <View style={styles.platformTabs}>
+          {(['all', ...ALL_PLATFORMS] as const).map((id) => {
+            const isAll = id === 'all';
+            const isActive = platformFilter === id;
+            const isEnabled = isAll || selectedPlatforms.includes(id as PlatformId);
+            return (
+              <Pressable
+                key={id}
                 style={[
-                  styles.platformTabText,
-                  isActive && styles.platformTabTextActive,
-                  !isEnabled && styles.platformTabTextDisabled,
+                  styles.platformTab,
+                  isActive && styles.platformTabActive,
+                  !isEnabled && styles.platformTabDisabled,
                 ]}
+                onPress={() => isEnabled && setPlatformFilter(id)}
+                disabled={!isEnabled}
               >
-                {isAll ? 'All' : PLATFORM_CONFIGS[id as PlatformId].displayName}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.platformTabText,
+                    isActive && styles.platformTabTextActive,
+                    !isEnabled && styles.platformTabTextDisabled,
+                  ]}
+                >
+                  {isAll ? 'All' : PLATFORM_CONFIGS[id as PlatformId].displayName}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
       {/* Dropdown menu */}
@@ -1440,10 +1442,17 @@ const styles = StyleSheet.create({
   },
 
   // Platform filter tabs
+  platformTabsContainer: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: 16,
+    padding: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
   platformTabs: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 8,
   },
   platformTab: {
     paddingHorizontal: 16,
