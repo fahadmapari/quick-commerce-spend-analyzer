@@ -1,0 +1,1 @@
+export { zeptoProvider } from './provider';

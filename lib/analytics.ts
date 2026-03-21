@@ -1,9 +1,5 @@
 import { AnalyticsSummary, MonthlySpend, Order, SerializedOrder } from '@/types/order';
-
-const MONTH_MAP: Record<string, number> = {
-  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
-};
+import { PlatformId } from '@/types/platform';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -14,32 +10,8 @@ export function parseAmount(raw: string): number {
   return isNaN(value) ? 0 : value;
 }
 
-export function parseDate(raw: string): Date {
-  // Pattern: "DD Mon, H:MM am/pm" e.g. "16 Mar, 8:07 pm"
-  const match = raw.match(/(\d{1,2})\s+(\w{3}),\s+(\d{1,2}):(\d{2})\s+(am|pm)/i);
-  if (!match) return new Date();
-
-  const [, day, mon, hours, minutes, ampm] = match;
-  const month = MONTH_MAP[mon];
-  if (month === undefined) return new Date();
-
-  const year = new Date().getFullYear();
-  let hour = parseInt(hours, 10);
-  if (ampm.toLowerCase() === 'pm' && hour !== 12) hour += 12;
-  if (ampm.toLowerCase() === 'am' && hour === 12) hour = 0;
-
-  const parsed = new Date(year, month, parseInt(day, 10), hour, parseInt(minutes, 10));
-
-  // If the parsed date is in the future (e.g. December orders viewed in January), subtract 1 year
-  if (parsed > new Date()) {
-    parsed.setFullYear(parsed.getFullYear() - 1);
-  }
-
-  return parsed;
-}
-
-export function makeOrderId(rawDate: string, rawAmount: string): string {
-  return `${rawDate.replace(/\s+/g, '')}-${rawAmount.replace(/\s+/g, '')}`;
+export function makeOrderId(platform: PlatformId, rawDate: string, rawAmount: string): string {
+  return `${platform}:${rawDate.replace(/\s+/g, '')}-${rawAmount.replace(/\s+/g, '')}`;
 }
 
 export function deserializeOrder(s: SerializedOrder): Order {
@@ -49,6 +21,7 @@ export function deserializeOrder(s: SerializedOrder): Order {
     date: new Date(s.dateIso),
     rawDate: s.rawDate,
     rawAmount: s.rawAmount,
+    platform: s.platform,
   };
 }
 
@@ -59,6 +32,7 @@ export function serializeOrder(o: Order): SerializedOrder {
     dateIso: o.date.toISOString(),
     rawDate: o.rawDate,
     rawAmount: o.rawAmount,
+    platform: o.platform,
   };
 }
 

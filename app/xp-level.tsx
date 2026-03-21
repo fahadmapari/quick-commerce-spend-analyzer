@@ -128,7 +128,7 @@ export default function XpLevelScreen() {
           <View style={styles.emptyCard}>
             <Ionicons name="flash-outline" size={28} color={Colors.textDisabled} />
             <Text style={styles.emptyText}>No XP earned yet</Text>
-            <Text style={styles.emptyHint}>Sync your Blinkit account to get started!</Text>
+            <Text style={styles.emptyHint}>Sync your accounts to get started!</Text>
           </View>
         ) : (
           groupedEvents.map(({ dateKey, events }) => (

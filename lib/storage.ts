@@ -1,9 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { deserializeOrder, makeOrderId, parseAmount, parseDate, serializeOrder } from './analytics';
+import { deserializeOrder, makeOrderId, parseAmount, serializeOrder } from './analytics';
 import { Order, SerializedOrder, StoredOrderData } from '@/types/order';
 import { GamificationState } from '@/types/gamification';
+import { PlatformId, ALL_PLATFORMS } from '@/types/platform';
 
-const STORAGE_KEY = 'blinkit_orders_v1';
+// ── Per-platform order storage ──────────────────────────────────────────
+
+function orderKey(platform: PlatformId): string {
+  return `orders_v2_${platform}`;
+}
 
 function dedupeSerializedOrders(orders: SerializedOrder[]): SerializedOrder[] {
   const seen = new Set<string>();
@@ -18,9 +23,9 @@ function dedupeSerializedOrders(orders: SerializedOrder[]): SerializedOrder[] {
   return deduped;
 }
 
-export async function loadOrders(): Promise<StoredOrderData | null> {
+export async function loadOrders(platform: PlatformId): Promise<StoredOrderData | null> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    const raw = await AsyncStorage.getItem(orderKey(platform));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as StoredOrderData;
     return {
@@ -32,31 +37,35 @@ export async function loadOrders(): Promise<StoredOrderData | null> {
   }
 }
 
-export async function saveOrderData(data: StoredOrderData): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function loadAllOrders(): Promise<{
+  orders: SerializedOrder[];
+  lastSyncedAt: string | null;
+}> {
+  const allOrders: SerializedOrder[] = [];
+  let latestSync: string | null = null;
+
+  for (const platform of ALL_PLATFORMS) {
+    const data = await loadOrders(platform);
+    if (!data) continue;
+    allOrders.push(...data.orders);
+    if (data.lastSyncedAt && (!latestSync || data.lastSyncedAt > latestSync)) {
+      latestSync = data.lastSyncedAt;
+    }
+  }
+
+  return { orders: dedupeSerializedOrders(allOrders), lastSyncedAt: latestSync };
 }
 
-export async function getMonthlyBudget(): Promise<number | null> {
-  const stored = await loadOrders();
-  return stored?.monthlyBudget ?? null;
-}
-
-export async function setMonthlyBudget(monthlyBudget: number | null): Promise<void> {
-  const stored = await loadOrders();
-  const data: StoredOrderData = {
-    orders: stored?.orders ?? [],
-    lastSyncedAt: stored?.lastSyncedAt ?? new Date().toISOString(),
-    version: stored?.version ?? 1,
-    monthlyBudget,
-  };
-
-  await saveOrderData(data);
+export async function saveOrderData(platform: PlatformId, data: StoredOrderData): Promise<void> {
+  await AsyncStorage.setItem(orderKey(platform), JSON.stringify(data));
 }
 
 export async function mergeOrders(
-  newRaw: Array<{ rawAmount: string; rawDate: string }>
+  platform: PlatformId,
+  newRaw: Array<{ rawAmount: string; rawDate: string; orderId?: string }>,
+  parseDateFn: (raw: string) => Date
 ): Promise<{ added: number; total: number }> {
-  const stored = await loadOrders();
+  const stored = await loadOrders(platform);
   const existing: SerializedOrder[] = dedupeSerializedOrders(stored?.orders ?? []);
 
   const existingIds = new Set(existing.map((o) => o.id));
@@ -64,13 +73,13 @@ export async function mergeOrders(
   const toAdd: SerializedOrder[] = [];
   for (const raw of newRaw) {
     const amount = parseAmount(raw.rawAmount);
-    if (amount === 0) continue; // skip parse failures
+    if (amount === 0) continue;
 
-    const date = parseDate(raw.rawDate);
-    const id = makeOrderId(raw.rawDate, raw.rawAmount);
+    const date = parseDateFn(raw.rawDate);
+    const id = raw.orderId || makeOrderId(platform, raw.rawDate, raw.rawAmount);
     if (existingIds.has(id)) continue;
 
-    const order: Order = { id, amount, date, rawDate: raw.rawDate, rawAmount: raw.rawAmount };
+    const order: Order = { id, amount, date, rawDate: raw.rawDate, rawAmount: raw.rawAmount, platform };
     toAdd.push(serializeOrder(order));
     existingIds.add(id);
   }
@@ -79,17 +88,16 @@ export async function mergeOrders(
   const data: StoredOrderData = {
     orders: merged,
     lastSyncedAt: new Date().toISOString(),
-    version: 1,
-    monthlyBudget: stored?.monthlyBudget ?? null,
+    version: 2,
     accountIdentity: stored?.accountIdentity ?? null,
   };
 
-  await saveOrderData(data);
+  await saveOrderData(platform, data);
   return { added: toAdd.length, total: merged.length };
 }
 
-export async function getOrdersAsObjects(): Promise<{ orders: Order[]; lastSyncedAt: string | null }> {
-  const stored = await loadOrders();
+export async function getOrdersAsObjects(platform: PlatformId): Promise<{ orders: Order[]; lastSyncedAt: string | null }> {
+  const stored = await loadOrders(platform);
   if (!stored) return { orders: [], lastSyncedAt: null };
   return {
     orders: stored.orders.map(deserializeOrder),
@@ -97,37 +105,70 @@ export async function getOrdersAsObjects(): Promise<{ orders: Order[]; lastSynce
   };
 }
 
-export async function getStoredAccountIdentity(): Promise<string | null> {
-  const stored = await loadOrders();
+export async function getAllOrdersAsObjects(): Promise<{ orders: Order[]; lastSyncedAt: string | null }> {
+  const { orders, lastSyncedAt } = await loadAllOrders();
+  return {
+    orders: orders.map(deserializeOrder),
+    lastSyncedAt,
+  };
+}
+
+// ── Per-platform account identity ───────────────────────────────────────
+
+export async function getStoredAccountIdentity(platform: PlatformId): Promise<string | null> {
+  const stored = await loadOrders(platform);
   return stored?.accountIdentity ?? null;
 }
 
-export async function saveAccountIdentity(identity: string): Promise<void> {
-  const stored = await loadOrders();
-  await saveOrderData({
+export async function saveAccountIdentity(platform: PlatformId, identity: string): Promise<void> {
+  const stored = await loadOrders(platform);
+  await saveOrderData(platform, {
     orders: stored?.orders ?? [],
     lastSyncedAt: stored?.lastSyncedAt ?? new Date().toISOString(),
-    version: stored?.version ?? 1,
-    monthlyBudget: stored?.monthlyBudget ?? null,
+    version: stored?.version ?? 2,
     accountIdentity: identity,
   });
 }
 
-// Clears orders only — preserves gamification (XP, quests, sync history).
-// Use this for force-fetch so the user doesn't lose their progress.
-export async function clearOrdersOnly(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+// ── Clear data ──────────────────────────────────────────────────────────
+
+export async function clearOrdersOnly(platform: PlatformId): Promise<void> {
+  await AsyncStorage.removeItem(orderKey(platform));
 }
 
-// Full wipe: orders + gamification. Use when switching accounts.
-export async function clearOrders(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+export async function clearAllOrders(): Promise<void> {
+  for (const platform of ALL_PLATFORMS) {
+    await AsyncStorage.removeItem(orderKey(platform));
+  }
   await AsyncStorage.removeItem(GAMIFICATION_KEY);
 }
 
-// ── Gamification Storage ──────────────────────────────────────────────
+// ── Budget (shared across platforms) ────────────────────────────────────
 
-const GAMIFICATION_KEY = 'blinkit_gamification_v1';
+const BUDGET_KEY = 'app_budget_v1';
+
+export async function getMonthlyBudget(): Promise<number | null> {
+  try {
+    const raw = await AsyncStorage.getItem(BUDGET_KEY);
+    if (!raw) return null;
+    const value = parseInt(raw, 10);
+    return isNaN(value) ? null : value;
+  } catch {
+    return null;
+  }
+}
+
+export async function setMonthlyBudget(monthlyBudget: number | null): Promise<void> {
+  if (monthlyBudget == null) {
+    await AsyncStorage.removeItem(BUDGET_KEY);
+  } else {
+    await AsyncStorage.setItem(BUDGET_KEY, String(monthlyBudget));
+  }
+}
+
+// ── Gamification Storage ────────────────────────────────────────────────
+
+const GAMIFICATION_KEY = 'app_gamification_v1';
 
 function defaultGamificationState(): GamificationState {
   return {

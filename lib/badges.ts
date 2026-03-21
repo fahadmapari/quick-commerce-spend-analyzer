@@ -8,19 +8,19 @@ function t(tier: BadgeTier): { tier: BadgeTier; xp: number } {
 
 export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   // Category 1: Lifetime Spending
-  { id: 'spend_1k',   title: 'First Bite',       description: 'Spent your first ₹1,000 on Blinkit',           icon: 'cart-outline',             category: 'spending', threshold: 1000,   ...t('bronze') },
+  { id: 'spend_1k',   title: 'First Bite',       description: 'Spent your first ₹1,000 on quick commerce',           icon: 'cart-outline',             category: 'spending', threshold: 1000,   ...t('bronze') },
   { id: 'spend_5k',   title: 'Cart Warmer',       description: 'Crossed ₹5,000 in total spending',             icon: 'flame-outline',            category: 'spending', threshold: 5000,   ...t('bronze') },
   { id: 'spend_10k',  title: 'Pantry Stacker',    description: '₹10,000 and counting',                         icon: 'cube-outline',             category: 'spending', threshold: 10000,  ...t('silver') },
   { id: 'spend_25k',  title: 'Grocery Guru',      description: 'A quarter lakh, all groceries',                 icon: 'school-outline',           category: 'spending', threshold: 25000,  ...t('silver') },
   { id: 'spend_50k',  title: 'Half-Lakh Hero',    description: '₹50,000 fueling your kitchen',                  icon: 'shield-checkmark-outline', category: 'spending', threshold: 50000,  ...t('gold') },
   { id: 'spend_1l',   title: 'Lakhpati',          description: 'Welcome to the ₹1 Lakh club',                   icon: 'diamond-outline',          category: 'spending', threshold: 100000, ...t('gold') },
   { id: 'spend_2_5l', title: 'Quarter Million',   description: '₹2.5L spent, zero regrets',                     icon: 'trophy-outline',           category: 'spending', threshold: 250000, ...t('platinum') },
-  { id: 'spend_5l',   title: 'Blinkit Whale',     description: 'Half a million on groceries. Respect.',          icon: 'fish-outline',             category: 'spending', threshold: 500000, ...t('platinum') },
+  { id: 'spend_5l',   title: 'QC Whale',     description: 'Half a million on groceries. Respect.',          icon: 'fish-outline',             category: 'spending', threshold: 500000, ...t('platinum') },
 
   // Category 2: Order Count
   { id: 'orders_1',   title: 'The First Drop',    description: 'Placed your very first order',                   icon: 'water-outline',       category: 'orders', threshold: 1,   ...t('bronze') },
   { id: 'orders_10',  title: 'Double Digits',     description: '10 orders deep',                                 icon: 'layers-outline',      category: 'orders', threshold: 10,  ...t('bronze') },
-  { id: 'orders_50',  title: 'Frequent Blinker',  description: '50 orders! You blink, it\'s delivered',           icon: 'flash-outline',       category: 'orders', threshold: 50,  ...t('silver') },
+  { id: 'orders_50',  title: 'Frequent Shopper',  description: '50 orders! You blink, it\'s delivered',           icon: 'flash-outline',       category: 'orders', threshold: 50,  ...t('silver') },
   { id: 'orders_100', title: 'Century Club',      description: '100 orders. That\'s commitment.',                 icon: 'ribbon-outline',      category: 'orders', threshold: 100, ...t('gold') },
   { id: 'orders_250', title: 'Unstoppable',       description: '250 orders and still going',                     icon: 'rocket-outline',      category: 'orders', threshold: 250, ...t('platinum') },
   { id: 'orders_500', title: 'Legend',             description: '500 orders. Bow down.',                          icon: 'star-outline',        category: 'orders', threshold: 500, ...t('platinum') },
@@ -38,11 +38,11 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
   // Category 5: Streak
   { id: 'streak_3',   title: 'Three-Peat',        description: 'Ordered 3 months in a row',                      icon: 'repeat-outline',      category: 'streak', threshold: 3,  ...t('bronze') },
   { id: 'streak_6',   title: 'Creature of Habit', description: '6 consecutive months. It\'s a lifestyle.',        icon: 'calendar-outline',    category: 'streak', threshold: 6,  ...t('silver') },
-  { id: 'streak_12',  title: 'Year-Round Blinker', description: 'Every single month for a year',                  icon: 'earth-outline',       category: 'streak', threshold: 12, ...t('gold') },
+  { id: 'streak_12',  title: 'Year-Round Shopper', description: 'Every single month for a year',                  icon: 'earth-outline',       category: 'streak', threshold: 12, ...t('gold') },
 
   // Category 6: Monthly Frequency
   { id: 'freq_10',    title: 'Power User',        description: '10 orders in a single month',                     icon: 'speedometer-outline', category: 'frequency', threshold: 10, ...t('silver') },
-  { id: 'freq_20',    title: 'Blinkit Addict',    description: '20 orders in one month. Seek help.',              icon: 'pulse-outline',       category: 'frequency', threshold: 20, ...t('gold') },
+  { id: 'freq_20',    title: 'QC Addict',    description: '20 orders in one month. Seek help.',              icon: 'pulse-outline',       category: 'frequency', threshold: 20, ...t('gold') },
 ];
 
 function computeMetrics(orders: Order[]) {

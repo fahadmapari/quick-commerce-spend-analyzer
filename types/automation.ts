@@ -13,6 +13,7 @@ export type AutomationPhase =
 export interface RawOrder {
   rawAmount: string;
   rawDate: string;
+  orderId?: string; // Zepto provides order ID from DOM href
 }
 
 export type WebViewBridgeMessage =

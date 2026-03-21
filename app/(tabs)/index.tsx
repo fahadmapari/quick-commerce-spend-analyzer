@@ -4,9 +4,11 @@ import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytic
 import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
 import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent, xpReasonLabel } from '@/lib/gamification';
 import { ensureMonthlyQuests, refreshQuestProgress, awardCompletedQuestXp, QuestProgressInputs } from '@/lib/quests';
-import { requestBlinkitSessionReset } from '@/lib/sessionReset';
-import { clearOrders, getGamificationState, getMonthlyBudget, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
+import { requestSessionReset } from '@/lib/sessionReset';
+import { clearAllOrders, clearOrdersOnly, getGamificationState, getMonthlyBudget, getAllOrdersAsObjects, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
+import { getSelectedPlatforms } from '@/lib/platformSettings';
 import { Colors } from '@/src/theme/colors';
+import { PlatformId, ALL_PLATFORMS, PLATFORM_CONFIGS } from '@/types/platform';
 import { AnalyticsSummary } from '@/types/order';
 import { GamificationState, MonthlyQuest, XpEvent } from '@/types/gamification';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -48,21 +50,37 @@ export default function DashboardScreen() {
   const [levelUpVisible, setLevelUpVisible] = useState(false);
   const [newLevel, setNewLevel] = useState(0);
   const [accountIdentity, setAccountIdentity] = useState<string | null>(null);
+  const [platformFilter, setPlatformFilter] = useState<PlatformId | 'all'>('all');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformId[]>([]);
   const router = useRouter();
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
-        const [{ orders, lastSyncedAt }, storedBudget, identity] = await Promise.all([
-          getOrdersAsObjects(),
+        const platforms = await getSelectedPlatforms();
+        if (!active) return;
+        setSelectedPlatforms(platforms.length > 0 ? platforms : ALL_PLATFORMS);
+
+        // Load orders based on filter
+        const { orders, lastSyncedAt } = platformFilter === 'all'
+          ? await getAllOrdersAsObjects()
+          : await getOrdersAsObjects(platformFilter);
+
+        const [storedBudget, ...identities] = await Promise.all([
           getMonthlyBudget(),
-          getStoredAccountIdentity(),
+          ...ALL_PLATFORMS.map((p) => getStoredAccountIdentity(p)),
         ]);
         if (!active) return;
+
+        // Build combined identity string
+        const identityParts = ALL_PLATFORMS
+          .map((p, i) => identities[i] ? `${PLATFORM_CONFIGS[p].displayName}: ${identities[i]}` : null)
+          .filter(Boolean);
+        setAccountIdentity(identityParts.length > 0 ? identityParts.join(', ') : null);
+
         setSummary(computeAnalytics(orders, lastSyncedAt));
         setMonthlyBudgetState(storedBudget);
-        setAccountIdentity(identity);
 
         // ── Gamification ──
         const now = new Date();
@@ -136,7 +154,7 @@ export default function DashboardScreen() {
         setRecentXp(finalGs.xpEvents.slice(-5).reverse());
       })();
       return () => { active = false; };
-    }, [])
+    }, [platformFilter])
   );
 
   const populatedSummary = summary && summary.totalOrders > 0 ? summary : null;
@@ -157,8 +175,10 @@ export default function DashboardScreen() {
   const remainingBudget = monthlyBudget !== null ? monthlyBudget - currentMonthSpend : null;
 
   const handleClearData = async () => {
-    await clearOrders();
-    await requestBlinkitSessionReset();
+    await clearAllOrders();
+    for (const p of ALL_PLATFORMS) {
+      await requestSessionReset(p);
+    }
     setSummary(null);
     setMonthlyBudgetState(null);
     setConfirmVisible(false);
@@ -222,7 +242,7 @@ export default function DashboardScreen() {
       <View style={styles.header}>
         {/* Left: title */}
         <View style={styles.headerLeft}>
-          <Text style={styles.headerLabel}>BLINKIT SPEND</Text>
+          <Text style={styles.headerLabel}>QC SPEND TRACKER</Text>
           <Text style={styles.headerTitle}>Dashboard</Text>
         </View>
 
@@ -248,6 +268,37 @@ export default function DashboardScreen() {
         </View>
       </View>
 
+      {/* Platform filter tabs */}
+      <View style={styles.platformTabs}>
+        {(['all', ...ALL_PLATFORMS] as const).map((id) => {
+          const isAll = id === 'all';
+          const isActive = platformFilter === id;
+          const isEnabled = isAll || selectedPlatforms.includes(id as PlatformId);
+          return (
+            <Pressable
+              key={id}
+              style={[
+                styles.platformTab,
+                isActive && styles.platformTabActive,
+                !isEnabled && styles.platformTabDisabled,
+              ]}
+              onPress={() => isEnabled && setPlatformFilter(id)}
+              disabled={!isEnabled}
+            >
+              <Text
+                style={[
+                  styles.platformTabText,
+                  isActive && styles.platformTabTextActive,
+                  !isEnabled && styles.platformTabTextDisabled,
+                ]}
+              >
+                {isAll ? 'All' : PLATFORM_CONFIGS[id as PlatformId].displayName}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Dropdown menu */}
       <Modal transparent visible={menuVisible} animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
@@ -255,9 +306,7 @@ export default function DashboardScreen() {
             {accountIdentity && (
               <View style={styles.menuAccountRow}>
                 <Ionicons name="person-circle-outline" size={15} color={Colors.textMuted} />
-                <Text style={styles.menuAccountText}>
-                  +91 {accountIdentity.slice(0, 5)} {accountIdentity.slice(5)}
-                </Text>
+                <Text style={styles.menuAccountText}>{accountIdentity}</Text>
               </View>
             )}
             <Pressable
@@ -279,7 +328,7 @@ export default function DashboardScreen() {
           <View style={styles.confirmCard}>
             <Text style={styles.confirmTitle}>Clear all data?</Text>
             <Text style={styles.confirmBody}>
-              This will erase all synced orders and reset the Blinkit web session so the current account is logged out.
+              This will erase all synced orders and reset all web sessions so the current accounts are logged out.
             </Text>
             <View style={styles.confirmActions}>
               <Pressable style={styles.confirmCancel} onPress={() => setConfirmVisible(false)}>
@@ -298,7 +347,7 @@ export default function DashboardScreen() {
           <View style={styles.confirmCard}>
             <Text style={styles.confirmTitle}>{monthlyBudget ? 'Edit monthly budget' : 'Set monthly budget'}</Text>
             <Text style={styles.confirmBody}>
-              Enter the amount you want to stay within for Blinkit this month.
+              Enter the amount you want to stay within for quick commerce this month.
             </Text>
             <TextInput
               value={budgetInput}
@@ -619,8 +668,8 @@ export default function DashboardScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyBody}>
-            Go to the <Text style={styles.emptyAccent}>Sync</Text> tab, log into Blinkit if needed,
-            and we will open order history and extract your data automatically.
+            Go to the <Text style={styles.emptyAccent}>Sync</Text> tab, select your platforms,
+            and we will extract your order history automatically.
           </Text>
         </View>
       )}
@@ -1388,5 +1437,38 @@ const styles = StyleSheet.create({
   emptyAccent: {
     color: Colors.green,
     fontWeight: '600',
+  },
+
+  // Platform filter tabs
+  platformTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  platformTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: Colors.bgOverlay,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  platformTabActive: {
+    backgroundColor: Colors.greenBg,
+    borderColor: Colors.greenDark,
+  },
+  platformTabDisabled: {
+    opacity: 0.35,
+  },
+  platformTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  platformTabTextActive: {
+    color: Colors.green,
+  },
+  platformTabTextDisabled: {
+    color: Colors.textDisabled,
   },
 });

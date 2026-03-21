@@ -1,9 +1,12 @@
+import { PlatformId } from './platform';
+
 export interface Order {
-  id: string; // `${rawDate}-${rawAmount}` used for deduplication
+  id: string; // `${platform}:${rawDate}-${rawAmount}` used for deduplication
   amount: number; // parsed integer rupees
   date: Date;
   rawDate: string; // e.g. "16 Mar, 8:07 pm"
   rawAmount: string; // e.g. "₹1,678"
+  platform: PlatformId;
 }
 
 export interface MonthlySpend {
@@ -29,6 +32,7 @@ export interface SerializedOrder {
   dateIso: string;
   rawDate: string;
   rawAmount: string;
+  platform: PlatformId;
 }
 
 export interface AnalyticsSummary {

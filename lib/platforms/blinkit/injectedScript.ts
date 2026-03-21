@@ -277,7 +277,7 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
       var raw = localStorage.getItem('user');
       if (raw) {
         var u = JSON.parse(raw);
-        if (u.phone) return String(u.phone).replace(/\D/g, '').slice(-10);
+        if (u.phone) return String(u.phone).replace(/\\D/g, '').slice(-10);
         if (u.id) return String(u.id);
       }
     } catch (e) {}
@@ -528,7 +528,8 @@ export function buildAutomationCommandScript(command: object): string {
   `;
 }
 
-export const RESET_WEBVIEW_SESSION_SCRIPT = `
+export function getSessionResetScript(cookieDomain: string): string {
+  return `
   (function() {
     function expireCookie(name, domain) {
       var cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;';
@@ -585,9 +586,10 @@ export const RESET_WEBVIEW_SESSION_SCRIPT = `
         if (!name) return;
         expireCookie(name);
         expireCookie(name, window.location.hostname);
-        expireCookie(name, '.blinkit.com');
+        expireCookie(name, '${cookieDomain}');
       });
     } catch (error) {}
   })();
   true;
 `;
+}

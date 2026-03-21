@@ -32,14 +32,14 @@ const SHARE_PLATFORMS = [
   { id: 'more', label: 'More', icon: 'share-outline' as const, color: Colors.green },
 ] as const;
 
-type PlatformId = typeof SHARE_PLATFORMS[number]['id'];
+type SharePlatformId = typeof SHARE_PLATFORMS[number]['id'];
 
 export function BadgeShareModal({ visible, onClose, progress }: BadgeShareModalProps) {
   const viewShotRef = useRef<ViewShot>(null);
   const [sharing, setSharing] = useState(false);
   const { badge } = progress;
 
-  const shareText = `I unlocked the "${badge.title}" badge on Blinkit Spend Analyzer! ${badge.description}`;
+  const shareText = `I unlocked the "${badge.title}" badge on QC Spend Tracker! ${badge.description}`;
 
   async function captureImage(): Promise<string | null> {
     try {
@@ -54,7 +54,7 @@ export function BadgeShareModal({ visible, onClose, progress }: BadgeShareModalP
     }
   }
 
-  async function handleShare(platformId: PlatformId) {
+  async function handleShare(platformId: SharePlatformId) {
     if (sharing) return;
     setSharing(true);
 
@@ -147,7 +147,7 @@ export function BadgeShareModal({ visible, onClose, progress }: BadgeShareModalP
               {/* Branding */}
               <View style={styles.branding}>
                 <Ionicons name="flash" size={12} color={Colors.green} />
-                <Text style={styles.brandingText}>Blinkit Spend Analyzer</Text>
+                <Text style={styles.brandingText}>QC Spend Tracker</Text>
               </View>
             </View>
           </ViewShot>

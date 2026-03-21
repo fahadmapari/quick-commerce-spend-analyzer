@@ -2,7 +2,7 @@ import { BadgeCard } from '@/components/badge-card';
 import { BadgeShareModal } from '@/components/badge-share-modal';
 import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
 import { awardXpBatch, makeXpEvent } from '@/lib/gamification';
-import { getGamificationState, getOrdersAsObjects } from '@/lib/storage';
+import { getGamificationState, getAllOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
 import { BadgeCategory, BadgeProgress, CATEGORY_LABELS } from '@/types/badge';
 import { XpEvent } from '@/types/gamification';
@@ -25,7 +25,7 @@ export default function BadgesScreen() {
     useCallback(() => {
       let active = true;
       (async () => {
-        const { orders } = await getOrdersAsObjects();
+        const { orders } = await getAllOrdersAsObjects();
         if (!active) return;
         const computed = computeBadges(orders);
         setBadges(computed);

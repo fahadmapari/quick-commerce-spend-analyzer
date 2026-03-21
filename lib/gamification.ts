@@ -14,7 +14,7 @@ const LEVEL_NAMES: string[] = [
   'Aisle Assassin',        // 7
   'Grocery Gladiator',     // 8
   'Cart Connoisseur',      // 9
-  'Blinkit Beast',         // 10
+  'Quick-Commerce Beast',  // 10
   'Stockpile Specialist',  // 11
   'Pantry Prince',         // 12
   'Speed Order Sage',      // 13
