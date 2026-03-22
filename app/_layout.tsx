@@ -1,10 +1,12 @@
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, ActivityIndicator, AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import 'react-native-reanimated';
 import { runMigrationIfNeeded } from '@/lib/migration';
+import { initNotifications, checkAndReschedule } from '@/lib/notifications';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -13,9 +15,38 @@ export const unstable_settings = {
 export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
+  const router = useRouter();
+  const appState = useRef(AppState.currentState);
+
   useEffect(() => {
     runMigrationIfNeeded().finally(() => setReady(true));
   }, []);
+
+  // Initialize notifications + foreground listener
+  useEffect(() => {
+    initNotifications();
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        checkAndReschedule();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // Handle notification tap → navigate to Sync tab
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.action === 'open_sync') {
+        router.push('/(tabs)/explore');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   if (!ready) {
     return (

@@ -8,6 +8,9 @@ import { PlatformId, PLATFORM_CONFIGS } from '@/types/platform';
 import { Colors } from '@/src/theme/colors';
 import PlatformSelectionModal from '@/components/platform-selection-modal';
 import PlatformSyncWebView from '@/components/platform-sync-webview';
+import FirstSyncModal from '@/components/first-sync-modal';
+import { getNotificationPromptShown } from '@/lib/storage';
+import { checkAndReschedule } from '@/lib/notifications';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -21,6 +24,7 @@ type SyncState =
 
 export default function SyncScreen() {
   const [state, setState] = useState<SyncState>({ status: 'loading' });
+  const [showFirstSyncModal, setShowFirstSyncModal] = useState(false);
 
   const startSyncFlow = useCallback(async () => {
     const completed = await hasCompletedPlatformSelection();
@@ -87,12 +91,18 @@ export default function SyncScreen() {
           key={currentPlatform}
           provider={provider}
           label={label}
-          onComplete={() => {
+          onComplete={async () => {
+            checkAndReschedule();
+
             const nextIndex = platformIndex + 1;
             if (nextIndex < platforms.length) {
               setState({ status: 'syncing', platformIndex: nextIndex, platforms });
             } else {
               setState({ status: 'done', platforms });
+              const promptShown = await getNotificationPromptShown();
+              if (!promptShown) {
+                setShowFirstSyncModal(true);
+              }
             }
           }}
           onError={() => {
@@ -112,6 +122,10 @@ export default function SyncScreen() {
           Check the Dashboard for your updated spending data.
         </Text>
       </View>
+      <FirstSyncModal
+        visible={showFirstSyncModal}
+        onDismiss={() => setShowFirstSyncModal(false)}
+      />
     </SafeAreaView>
   );
 }

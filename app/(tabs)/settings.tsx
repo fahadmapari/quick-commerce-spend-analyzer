@@ -12,10 +12,23 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  getNotificationSettings,
+  NotificationSettings,
+} from '@/lib/storage';
+import {
+  enableNotifications,
+  disableNotifications,
+  updateNotificationTime,
+  getNextReminderLabel,
+  cancelNotification,
+} from '@/lib/notifications';
 
 const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
 
@@ -28,6 +41,13 @@ export default function SettingsScreen() {
     blinkit: null,
     zepto: null,
   });
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings>({
+    enabled: false,
+    hour: 21,
+    minute: 0,
+  });
+  const [nextReminder, setNextReminder] = useState<string | null>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const loadSettings = useCallback(async () => {
     const [selected, storedBudget, ...identities] = await Promise.all([
@@ -41,6 +61,10 @@ export default function SettingsScreen() {
     const accs: Record<string, string | null> = {};
     ALL_PLATFORMS.forEach((p, i) => { accs[p] = identities[i]; });
     setAccounts(accs as Record<PlatformId, string | null>);
+    const notif = await getNotificationSettings();
+    setNotifSettings(notif);
+    const label = await getNextReminderLabel(notif);
+    setNextReminder(label);
   }, []);
 
   useFocusEffect(
@@ -108,11 +132,39 @@ export default function SettingsScreen() {
             for (const p of ALL_PLATFORMS) {
               await requestSessionReset(p);
             }
+            await cancelNotification();
+            setNotifSettings({ enabled: false, hour: 21, minute: 0 });
+            setNextReminder(null);
             await loadSettings();
           },
         },
       ]
     );
+  };
+
+  const handleNotifToggle = async (value: boolean) => {
+    if (value) {
+      const granted = await enableNotifications(notifSettings.hour, notifSettings.minute);
+      if (!granted) return;
+      const updated = { ...notifSettings, enabled: true };
+      setNotifSettings(updated);
+      setNextReminder(await getNextReminderLabel(updated));
+    } else {
+      await disableNotifications();
+      setNotifSettings({ ...notifSettings, enabled: false });
+      setNextReminder(null);
+    }
+  };
+
+  const handleTimeChange = async (_event: any, selectedDate?: Date) => {
+    setShowTimePicker(false);
+    if (!selectedDate) return;
+    const hour = selectedDate.getHours();
+    const minute = selectedDate.getMinutes();
+    await updateNotificationTime(hour, minute);
+    const updated = { ...notifSettings, hour, minute };
+    setNotifSettings(updated);
+    setNextReminder(await getNextReminderLabel(updated));
   };
 
   return (
@@ -204,6 +256,51 @@ export default function SettingsScreen() {
             </View>
           );
         })}
+      </View>
+
+      {/* Notifications section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
+        <View style={styles.notifRow}>
+          <Text style={styles.notifLabel}>Enable Reminders</Text>
+          <Switch
+            value={notifSettings.enabled}
+            onValueChange={handleNotifToggle}
+            trackColor={{ false: Colors.bgOverlay, true: Colors.greenDark }}
+            thumbColor={notifSettings.enabled ? Colors.green : Colors.textMuted}
+          />
+        </View>
+        <Pressable
+          style={[styles.notifRow, !notifSettings.enabled && styles.notifRowDisabled]}
+          onPress={() => notifSettings.enabled && setShowTimePicker(true)}
+          disabled={!notifSettings.enabled}
+        >
+          <Text style={[styles.notifLabel, !notifSettings.enabled && styles.notifTextDisabled]}>
+            Reminder Time
+          </Text>
+          <Text style={[styles.notifValue, !notifSettings.enabled && styles.notifTextDisabled]}>
+            {new Date(0, 0, 0, notifSettings.hour, notifSettings.minute).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+            })}
+          </Text>
+        </Pressable>
+        {nextReminder && (
+          <View style={styles.notifRow}>
+            <Text style={styles.notifLabel}>Next Reminder</Text>
+            <Text style={styles.notifHint}>{nextReminder}</Text>
+          </View>
+        )}
+        {showTimePicker && (
+          <DateTimePicker
+            value={new Date(0, 0, 0, notifSettings.hour, notifSettings.minute)}
+            mode="time"
+            is24Hour={false}
+            display="spinner"
+            onChange={handleTimeChange}
+            themeVariant="dark"
+          />
+        )}
       </View>
 
       {/* Data section */}
@@ -430,6 +527,32 @@ const styles = StyleSheet.create({
   },
   clearAllText: {
     color: Colors.red,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  notifRowDisabled: {
+    opacity: 0.4,
+  },
+  notifLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  notifValue: {
+    fontSize: 14,
+    color: Colors.green,
+    fontWeight: '600',
+  },
+  notifTextDisabled: {
+    color: Colors.textDisabled,
+  },
+  notifHint: {
+    fontSize: 13,
+    color: Colors.textMuted,
   },
   aboutText: {
     fontSize: 14,

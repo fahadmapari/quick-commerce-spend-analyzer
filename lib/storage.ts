@@ -141,6 +141,8 @@ export async function clearAllOrders(): Promise<void> {
     await AsyncStorage.removeItem(orderKey(platform));
   }
   await AsyncStorage.removeItem(GAMIFICATION_KEY);
+  await AsyncStorage.removeItem(NOTIFICATION_SETTINGS_KEY);
+  await AsyncStorage.removeItem(NOTIFICATION_PROMPT_SHOWN_KEY);
 }
 
 // ── Budget (shared across platforms) ────────────────────────────────────
@@ -201,4 +203,48 @@ export async function updateGamificationState(
   const next = updater(current);
   await saveGamificationState(next);
   return next;
+}
+
+// ── Notification Settings ───────────────────────────────────────────────
+
+const NOTIFICATION_SETTINGS_KEY = 'notification_settings_v1';
+const NOTIFICATION_PROMPT_SHOWN_KEY = 'notification_prompt_shown_v1';
+
+export interface NotificationSettings {
+  enabled: boolean;
+  hour: number;   // 0-23, default 21
+  minute: number; // 0-59, default 0
+}
+
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: false,
+  hour: 21,
+  minute: 0,
+};
+
+export async function getNotificationSettings(): Promise<NotificationSettings> {
+  try {
+    const raw = await AsyncStorage.getItem(NOTIFICATION_SETTINGS_KEY);
+    if (!raw) return DEFAULT_NOTIFICATION_SETTINGS;
+    return JSON.parse(raw) as NotificationSettings;
+  } catch {
+    return DEFAULT_NOTIFICATION_SETTINGS;
+  }
+}
+
+export async function setNotificationSettings(settings: NotificationSettings): Promise<void> {
+  await AsyncStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export async function getNotificationPromptShown(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(NOTIFICATION_PROMPT_SHOWN_KEY);
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function setNotificationPromptShown(shown: boolean): Promise<void> {
+  await AsyncStorage.setItem(NOTIFICATION_PROMPT_SHOWN_KEY, String(shown));
 }
