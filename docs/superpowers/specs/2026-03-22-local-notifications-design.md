@@ -19,9 +19,14 @@ A local notification system that reminds users to sync their order data daily. N
 
 ## Technical Approach
 
-**Library:** `expo-notifications` for scheduling and permissions. `@react-native-community/datetimepicker` for the native time picker in settings.
+**Library:** `expo-notifications` for scheduling and permissions. `@react-native-community/datetimepicker` for the native time picker in settings. Both require native code — the app already uses a custom dev client (WebView, Location).
 
 **No new state management patterns.** Follows the existing direct-AsyncStorage pattern used throughout the app.
+
+**Configuration:** `expo-notifications` must be added to the `plugins` array in `app.json`:
+```json
+["expo-notifications"]
+```
 
 ---
 
@@ -37,17 +42,39 @@ A local notification system that reminds users to sync their order data daily. N
 
 ### Calendar-Day Skip Logic
 
-- On each app foreground + after each successful sync, compare `lastSyncedAt` date against today's date
-- If same calendar day → cancel any pending notification for today
-- Always ensure tomorrow's notification is scheduled
+- On each app foreground + after each successful sync, compare the aggregate `lastSyncedAt` across all platforms against today's date (use `loadAllOrders()` to get the latest sync timestamp across Blinkit/Zepto)
+- If any platform was synced today (same calendar day) → cancel pending notification and reschedule for tomorrow
+- Always ensure the next notification is scheduled
 
-### Notification Identifier
+**App foreground detection:** Add an `AppState` event listener in `app/_layout.tsx`:
+```
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') checkAndRescheduleNotification();
+});
+```
 
-A single repeating daily trigger with a fixed identifier: `"daily-sync-reminder"`. Cancel/reschedule by this identifier.
+### Notification Strategy: Single-Fire + Reschedule
 
-### Copy Rotation
+Use a **non-repeating** trigger (not a repeating daily trigger). Schedule exactly one notification for the next eligible time with identifier `"daily-sync-reminder"`. On each app foreground or sync completion, cancel and reschedule with fresh random copy for the next eligible time (today if before reminder time and not yet synced, otherwise tomorrow).
 
-Pick a random message from the pool each time we schedule. Since we reschedule daily (after sync or app open), the copy naturally rotates.
+This approach:
+- Guarantees copy rotation on each app open
+- Simplifies calendar-day skip logic (only one future notification exists at a time)
+- Avoids the issue where a repeating trigger keeps the same copy for users who don't open the app daily
+
+### Android Notification Channel
+
+On Android 8+ (API 26+), create a notification channel before scheduling:
+```
+Channel ID: "daily-sync-reminder"
+Channel name: "Daily Sync Reminders"
+Importance: DEFAULT
+```
+Created programmatically via `Notifications.setNotificationChannelAsync` in `lib/notifications.ts` initialization.
+
+### Notification Tap Behavior
+
+When the user taps the notification, deep-link to the Sync tab (`/(tabs)/explore`). Implement via `Notifications.addNotificationResponseReceivedListener` in `app/_layout.tsx` with Expo Router navigation.
 
 ---
 
@@ -87,7 +114,7 @@ Stored in `lib/notificationCopy.ts` as a simple exported array.
 
 1. "Your wallet called — it wants an update! 📱"
 2. "Quick-commerce never sleeps, but your tracker shouldn't either 🛒"
-3. "Blinkit delivered, now let's track what it cost 💸"
+3. "Orders delivered, now let's track what they cost 💸"
 4. "2 minutes to sync, 24 hours of clarity ⏱️"
 5. "Your spends are piling up — time for a quick sync!"
 
@@ -111,7 +138,7 @@ Stored in `lib/notificationCopy.ts` as a simple exported array.
 
 ### Location
 
-New section in `app/(tabs)/settings.tsx`, placed between "Monthly Budget" and "Data Management" sections.
+New section in `app/(tabs)/settings.tsx`, placed between the "Accounts" section and the "Data" section.
 
 ### Section Header
 
@@ -158,8 +185,30 @@ Matches existing settings sections — same dark card background, same text styl
 |------|--------|
 | `app/(tabs)/explore.tsx` | After sync `done` → check if prompt shown → show first-sync modal |
 | `app/(tabs)/settings.tsx` | Add Notifications section with toggle, time picker, next reminder info |
-| `app/_layout.tsx` | On app foreground → call skip-if-synced-today logic |
+| `app/_layout.tsx` | Add `AppState` foreground listener for check-and-reschedule logic + notification tap listener for deep-linking to Sync tab |
 | `lib/storage.ts` | Add getter/setter for new AsyncStorage keys |
+
+### New Type
+
+`NotificationSettings` interface in `lib/notifications.ts`:
+```typescript
+interface NotificationSettings {
+  enabled: boolean;
+  hour: number;   // 0-23, default 21
+  minute: number; // 0-59, default 0
+}
+```
+
+### Clear All Data Integration
+
+When the user taps "Clear all data" in settings (`handleClearAll`), also:
+- Cancel all scheduled notifications
+- Remove `notification_settings_v1` and `notification_prompt_shown_v1` from AsyncStorage
+- This ensures a fresh start — the user will see the first-sync interstitial again after re-syncing
+
+### Reinstall Behavior
+
+AsyncStorage is cleared on uninstall (both iOS and Android). After reinstall, the user gets a clean slate — first-sync interstitial will show again. OS notification permission may still be granted from the prior install; `requestPermissionsAsync` will return `granted` immediately with no OS prompt in that case.
 
 ### Dependencies Added
 
