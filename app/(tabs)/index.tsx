@@ -80,7 +80,7 @@ export default function DashboardScreen() {
         const identityParts = ALL_PLATFORMS
           .map((p, i) => identities[i] ? `${PLATFORM_CONFIGS[p].displayName}: ${identities[i]}` : null)
           .filter(Boolean);
-        setAccountIdentity(identityParts.length > 0 ? identityParts.join(', ') : null);
+        setAccountIdentity(identityParts.length > 0 ? identityParts.join('\n') : null);
 
         setSummary(computeAnalytics(displayOrders, lastSyncedAt));
         setMonthlyBudgetState(storedBudget);
@@ -310,8 +310,12 @@ export default function DashboardScreen() {
           <View style={styles.menuCard}>
             {accountIdentity && (
               <View style={styles.menuAccountRow}>
-                <Ionicons name="person-circle-outline" size={15} color={Colors.textMuted} />
-                <Text style={styles.menuAccountText}>{accountIdentity}</Text>
+                {accountIdentity.split('\n').map((line, i) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                    <Ionicons name="person-circle-outline" size={15} color={Colors.textMuted} />
+                    <Text style={styles.menuAccountText}>{line}</Text>
+                  </View>
+                ))}
               </View>
             )}
             <Pressable
@@ -809,9 +813,9 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   menuAccountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
