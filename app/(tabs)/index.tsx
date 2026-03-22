@@ -450,8 +450,8 @@ export default function DashboardScreen() {
             </View>
           </View>
 
-          {/* Level + XP Card (collapsible) */}
-          {gamState && (
+          {/* Level + XP Card (collapsible) — only shown for "All" filter */}
+          {gamState && platformFilter === 'all' && (
             <Pressable style={styles.card} onPress={() => setLevelCardExpanded((v) => !v)}>
               <View style={styles.levelRow}>
                 <View style={styles.levelBadge}>
@@ -530,7 +530,8 @@ export default function DashboardScreen() {
             </Pressable>
           )}
 
-          <View style={styles.card}>
+          {/* Monthly Budget — only shown for "All" filter */}
+          {platformFilter === 'all' && <View style={styles.card}>
             <View style={styles.budgetHeader}>
               <View style={styles.budgetHeaderCopy}>
                 <Text style={styles.cardSubtitle}>MONTHLY BUDGET</Text>
@@ -581,7 +582,7 @@ export default function DashboardScreen() {
                 ]}
               />
             </View>
-          </View>
+          </View>}
 
           {/* Most / Least spent month */}
           <View style={styles.card}>
