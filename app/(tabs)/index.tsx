@@ -693,6 +693,9 @@ export default function DashboardScreen() {
             Go to the <Text style={styles.emptyAccent}>Sync</Text> tab, select your platforms,
             and we will extract your order history automatically.
           </Text>
+          <Text style={styles.emptyPrivacy}>
+            Your data never leaves your device. Everything is stored locally — we don't send anything to any server.
+          </Text>
         </View>
       )}
 
@@ -1465,6 +1468,15 @@ const styles = StyleSheet.create({
   emptyAccent: {
     color: Colors.green,
     fontWeight: '600',
+  },
+  emptyPrivacy: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 260,
+    marginTop: 8,
+    opacity: 0.7,
   },
 
   // Platform filter tabs
