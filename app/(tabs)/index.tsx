@@ -275,35 +275,38 @@ export default function DashboardScreen() {
 
       {/* Platform filter tabs */}
       <View style={styles.platformTabsContainer}>
-        <View style={styles.platformTabs}>
-          {(['all', ...ALL_PLATFORMS] as const).map((id) => {
-            const isAll = id === 'all';
-            const isActive = platformFilter === id;
-            const isEnabled = isAll || selectedPlatforms.includes(id as PlatformId);
-            return (
-              <Pressable
-                key={id}
-                style={[
-                  styles.platformTab,
-                  isActive && styles.platformTabActive,
-                  !isEnabled && styles.platformTabDisabled,
-                ]}
-                onPress={() => isEnabled && setPlatformFilter(id)}
-                disabled={!isEnabled}
-              >
-                <Text
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={styles.platformTabs}>
+            {(['all', ...ALL_PLATFORMS] as const).map((id) => {
+              const isAll = id === 'all';
+              const isActive = platformFilter === id;
+              const isEnabled = isAll || selectedPlatforms.includes(id as PlatformId);
+              return (
+                <Pressable
+                  key={id}
                   style={[
-                    styles.platformTabText,
-                    isActive && styles.platformTabTextActive,
-                    !isEnabled && styles.platformTabTextDisabled,
+                    styles.platformTab,
+                    isActive && styles.platformTabActive,
+                    !isEnabled && styles.platformTabDisabled,
                   ]}
+                  onPress={() => isEnabled && setPlatformFilter(id)}
+                  disabled={!isEnabled}
                 >
-                  {isAll ? 'All' : PLATFORM_CONFIGS[id as PlatformId].displayName}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.platformTabText,
+                      isActive && styles.platformTabTextActive,
+                      !isEnabled && styles.platformTabTextDisabled,
+                    ]}
+                  >
+                    {isAll ? 'All' : PLATFORM_CONFIGS[id as PlatformId].displayName}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
       </View>
 
       {/* Dropdown menu */}
@@ -641,22 +644,24 @@ export default function DashboardScreen() {
 
             {/* Range filter — bar mode only */}
             {chartMode === 'bar' && (
-              <View style={styles.rangeRow}>
-                {BAR_RANGES.map((r) => (
-                  <Pressable
-                    key={r.key}
-                    style={[styles.rangePill, barRange === r.key && styles.rangePillActive]}
-                    onPress={() => {
-                      setBarRange(r.key);
-                      if (r.key !== 'lifetime') setLifetimeChunk(LIFETIME_PAGE);
-                    }}
-                  >
-                    <Text style={[styles.rangePillText, barRange === r.key && styles.rangePillTextActive]}>
-                      {r.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.rangeRow}>
+                  {BAR_RANGES.map((r) => (
+                    <Pressable
+                      key={r.key}
+                      style={[styles.rangePill, barRange === r.key && styles.rangePillActive]}
+                      onPress={() => {
+                        setBarRange(r.key);
+                        if (r.key !== 'lifetime') setLifetimeChunk(LIFETIME_PAGE);
+                      }}
+                    >
+                      <Text numberOfLines={1} style={[styles.rangePillText, barRange === r.key && styles.rangePillTextActive]}>
+                        {r.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
             )}
 
             {/* Chart content */}
@@ -1158,8 +1163,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   rangePill: {
-    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 8,
     backgroundColor: Colors.bgBase,
