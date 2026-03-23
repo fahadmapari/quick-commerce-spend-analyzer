@@ -167,11 +167,13 @@ export default function DashboardScreen() {
     : 0;
   const now = new Date();
   const currentMonthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
-  const currentMonthSpend = populatedSummary
+  const currentMonthEntry = populatedSummary
     ? populatedSummary.monthlyBreakdown.find(
       (entry) => entry.year === now.getFullYear() && entry.monthIndex === now.getMonth()
-    )?.total ?? 0
-    : 0;
+    )
+    : null;
+  const currentMonthSpend = currentMonthEntry?.total ?? 0;
+  const currentMonthOrders = currentMonthEntry?.orderCount ?? 0;
   const budgetProgress = monthlyBudget ? Math.min(currentMonthSpend / monthlyBudget, 1) : 0;
   const budgetPercent = monthlyBudget ? Math.round((currentMonthSpend / monthlyBudget) * 100) : 0;
   const isOverBudget = monthlyBudget !== null && currentMonthSpend > monthlyBudget;
@@ -528,6 +530,16 @@ export default function DashboardScreen() {
                 </>
               )}
             </Pressable>
+          )}
+
+          {/* Current Month Spend — only shown for individual platform filter */}
+          {platformFilter !== 'all' && (
+            <View style={styles.card}>
+              <Text style={styles.cardSubtitle}>THIS MONTH</Text>
+              <Text style={styles.cardTitle}>{currentMonthLabel}</Text>
+              <Text style={styles.budgetCurrentSpend}>{formatCurrency(currentMonthSpend)}</Text>
+              <Text style={styles.currentMonthOrders}>{currentMonthOrders} {currentMonthOrders === 1 ? 'order' : 'orders'}</Text>
+            </View>
           )}
 
           {/* Monthly Budget — only shown for "All" filter */}
@@ -1048,6 +1060,12 @@ const styles = StyleSheet.create({
     color: Colors.textHeading,
     letterSpacing: -1,
     lineHeight: 36,
+  },
+  currentMonthOrders: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontFamily: mono,
+    marginTop: 4,
   },
   budgetBudgetValue: {
     fontSize: 22,
