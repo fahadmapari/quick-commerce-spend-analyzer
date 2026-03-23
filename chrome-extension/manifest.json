@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Commerce Spend Analyzer",
+  "description": "Analyze your spending on Blinkit & Zepto with badges, XP levels, and monthly insights",
+  "version": "1.0.0",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://blinkit.com/*",
+    "https://www.zeptonow.com/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://blinkit.com/*"],
+      "js": ["content-scripts/blinkit.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.zeptonow.com/*"],
+      "js": ["content-scripts/zepto.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

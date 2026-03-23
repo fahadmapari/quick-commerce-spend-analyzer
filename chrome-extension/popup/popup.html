@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Commerce Spend Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- Tab Navigation -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="dashboard">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="tab-btn" data-tab="sync">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+      <span>Sync</span>
+    </button>
+    <button class="tab-btn" data-tab="badges">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+      <span>Badges</span>
+    </button>
+    <button class="tab-btn" data-tab="settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- Dashboard Tab -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+    </div>
+
+    <!-- XP Card -->
+    <div class="xp-card" id="xp-card">
+      <div class="xp-header">
+        <div class="xp-level-badge" id="xp-level-num">1</div>
+        <div class="xp-info">
+          <div class="xp-level-name" id="xp-level-name">Cart Curious</div>
+          <div class="xp-bar-container">
+            <div class="xp-bar" id="xp-bar" style="width: 0%"></div>
+          </div>
+          <div class="xp-text" id="xp-text">0 / 100 XP</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Lifetime Spend</div>
+        <div class="stat-value" id="lifetime-spend">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value" id="total-orders">-</div>
+      </div>
+    </div>
+
+    <!-- Budget -->
+    <div class="section" id="budget-section">
+      <div class="section-header">
+        <h2>Monthly Budget</h2>
+        <button class="link-btn" id="edit-budget-btn">Set Budget</button>
+      </div>
+      <div id="budget-display" class="hidden">
+        <div class="budget-bar-container">
+          <div class="budget-bar" id="budget-bar"></div>
+        </div>
+        <div class="budget-text" id="budget-text"></div>
+      </div>
+    </div>
+
+    <!-- Monthly Chart -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Monthly Spending</h2>
+        <div class="range-filters">
+          <button class="range-btn active" data-range="6">6M</button>
+          <button class="range-btn" data-range="12">1Y</button>
+          <button class="range-btn" data-range="0">All</button>
+        </div>
+      </div>
+      <div id="chart-container" class="chart-container">
+        <div class="empty-state" id="chart-empty">Sync your orders to see spending trends</div>
+      </div>
+    </div>
+
+    <!-- Extremes -->
+    <div class="stats-row" id="extremes-section" style="display:none">
+      <div class="stat-card">
+        <div class="stat-label">Highest Month</div>
+        <div class="stat-value small" id="highest-month">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Lowest Month</div>
+        <div class="stat-value small" id="lowest-month">-</div>
+      </div>
+    </div>
+
+    <!-- Last Synced -->
+    <div class="last-synced" id="last-synced"></div>
+  </div>
+
+  <!-- Sync Tab -->
+  <div class="tab-content" id="tab-sync">
+    <div class="page-header">
+      <h1>Sync Orders</h1>
+      <p class="subtitle">Extract your order history from quick commerce platforms</p>
+    </div>
+
+    <div class="sync-cards">
+      <div class="sync-card blinkit-card">
+        <div class="sync-card-header">
+          <div class="platform-icon blinkit-icon">B</div>
+          <div>
+            <div class="platform-name">Blinkit</div>
+            <div class="platform-status" id="blinkit-status">Not synced</div>
+          </div>
+        </div>
+        <button class="sync-btn blinkit-btn" id="sync-blinkit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Sync Blinkit
+        </button>
+      </div>
+
+      <div class="sync-card zepto-card">
+        <div class="sync-card-header">
+          <div class="platform-icon zepto-icon">Z</div>
+          <div>
+            <div class="platform-name">Zepto</div>
+            <div class="platform-status" id="zepto-status">Not synced</div>
+          </div>
+        </div>
+        <button class="sync-btn zepto-btn" id="sync-zepto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          Sync Zepto
+        </button>
+      </div>
+    </div>
+
+    <div class="sync-info">
+      <h3>How it works</h3>
+      <ol>
+        <li>Click sync to open the platform's order history page</li>
+        <li>Log in if prompted (the extension doesn't see your password)</li>
+        <li>Orders are automatically extracted from the page</li>
+        <li>All data stays in your browser - nothing is sent to any server</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Badges Tab -->
+  <div class="tab-content" id="tab-badges">
+    <div class="page-header">
+      <h1>Badges</h1>
+      <div class="badge-progress-header">
+        <div class="badge-progress-bar-container">
+          <div class="badge-progress-bar" id="badge-progress-bar" style="width: 0%"></div>
+        </div>
+        <span class="badge-progress-text" id="badge-progress-text">0 / 0 unlocked</span>
+      </div>
+    </div>
+    <div id="badges-grid" class="badges-grid"></div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div class="tab-content" id="tab-settings">
+    <div class="page-header">
+      <h1>Settings</h1>
+    </div>
+
+    <div class="settings-group">
+      <h3>Monthly Budget</h3>
+      <div class="setting-row">
+        <input type="number" id="budget-input" placeholder="e.g. 5000" class="setting-input">
+        <button class="primary-btn" id="save-budget-btn">Save</button>
+        <button class="danger-btn small" id="remove-budget-btn">Remove</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>Account Info</h3>
+      <div class="setting-row" id="account-info">
+        <span class="muted">No accounts synced yet</span>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h3>Data</h3>
+      <button class="danger-btn" id="clear-data-btn">Clear All Data</button>
+      <p class="muted small-text">This will remove all synced orders, badges, and XP progress</p>
+    </div>
+
+    <div class="settings-group">
+      <h3>About</h3>
+      <p class="muted">Quick Commerce Spend Analyzer v1.0.0</p>
+      <p class="muted small-text">All data is stored locally in your browser. Nothing is sent to any server.</p>
+    </div>
+  </div>
+
+  <!-- Budget Modal -->
+  <div class="modal-overlay hidden" id="budget-modal">
+    <div class="modal">
+      <h3>Set Monthly Budget</h3>
+      <input type="number" id="modal-budget-input" placeholder="Enter amount in ₹" class="setting-input">
+      <div class="modal-actions">
+        <button class="secondary-btn" id="modal-cancel">Cancel</button>
+        <button class="primary-btn" id="modal-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
