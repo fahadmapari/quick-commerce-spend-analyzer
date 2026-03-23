@@ -1,5 +1,6 @@
 import { MonthlyBar } from '@/components/monthly-bar';
 import { MonthlyLineChart } from '@/components/monthly-line-chart';
+import { BAR_RANGES, BarRange } from '@/constants/ranges';
 import { computeAnalytics, formatCurrency, formatSyncDate } from '@/lib/analytics';
 import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
 import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent, xpReasonLabel } from '@/lib/gamification';
@@ -17,14 +18,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, Line, Pattern, Rect } from 'react-native-svg';
 
-type BarRange = '3M' | '6M' | '1Y' | '2Y' | 'lifetime';
-const BAR_RANGES: { label: string; key: BarRange; months: number | null }[] = [
-  { label: '3M',       key: '3M',       months: 3  },
-  { label: '6M',       key: '6M',       months: 6  },
-  { label: '1Y',       key: '1Y',       months: 12 },
-  { label: '2Y',       key: '2Y',       months: 24 },
-  { label: 'Lifetime', key: 'lifetime', months: null },
-];
 const LIFETIME_PAGE = 12;
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
