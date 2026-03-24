@@ -11,7 +11,7 @@ export function VerticalBarChart({
   labels: string[];
   height?: number;
 }) {
-  const max = Math.max(...values, 0);
+  const max = values.reduce((a, b) => Math.max(a, b), 0);
 
   return (
     <View style={styles.chartBlock}>
@@ -63,10 +63,16 @@ export function DonutChart({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-  let offset = 0;
+
+  const offsets: number[] = [];
+  let runningOffset = 0;
+  for (const segment of segments) {
+    offsets.push(runningOffset);
+    runningOffset += circumference * (total > 0 ? segment.value / total : 0);
+  }
 
   return (
-    <View style={styles.donutWrap}>
+    <View style={[styles.donutWrap, { width: size, height: size }]}>
       <Svg width={size} height={size}>
         <Circle
           cx={size / 2}
@@ -79,7 +85,7 @@ export function DonutChart({
         {segments.map((segment, index) => {
           const ratio = total > 0 ? segment.value / total : 0;
           const dash = circumference * ratio;
-          const circle = (
+          return (
             <Circle
               key={index}
               cx={size / 2}
@@ -89,14 +95,12 @@ export function DonutChart({
               strokeWidth={strokeWidth}
               fill="none"
               strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeDashoffset={-offset}
+              strokeDashoffset={-offsets[index]}
               strokeLinecap="butt"
               rotation={-90}
               origin={`${size / 2}, ${size / 2}`}
             />
           );
-          offset += dash;
-          return circle;
         })}
       </Svg>
       <View style={styles.donutCenter}>
@@ -144,8 +148,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   donutWrap: {
-    width: 132,
-    height: 132,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -6,8 +6,6 @@ import { VerticalBarChart } from './charts';
 import { EmptyInsight, InsightCard, sharedStyles } from './shared';
 
 export function AverageOrderTrendCard({ insight }: { insight: AverageOrderTrendInsight }) {
-  const pctLabel = `${insight.pctChange > 0 ? '+' : ''}${insight.pctChange.toFixed(0)}%`;
-
   return (
     <InsightCard label="Average Order Trend">
       {insight.hasData ? (
@@ -15,7 +13,7 @@ export function AverageOrderTrendCard({ insight }: { insight: AverageOrderTrendI
           <Text style={sharedStyles.bigValue}>{formatCurrency(Math.round(insight.averageOrderValue))}</Text>
           <Text style={[styles.persona, { color: insight.accentColor }]}>{insight.label}</Text>
           <Text style={sharedStyles.supportingText}>
-            {insight.direction === 'up' ? 'Rising' : insight.direction === 'down' ? 'Cooling' : 'Holding steady'} at {pctLabel}
+            {insight.direction === 'up' ? 'Rising' : insight.direction === 'down' ? 'Cooling' : 'Holding steady'} at {`${insight.pctChange > 0 ? '+' : ''}${insight.pctChange.toFixed(0)}%`}
           </Text>
           <View style={styles.trendTrack}>
             <View

@@ -29,21 +29,33 @@ export default function InsightsScreen() {
       let active = true;
 
       (async () => {
-        const platforms = await getSelectedPlatforms();
-        const { orders: allOrders } = await getAllOrdersAsObjects();
-        const displayOrders = platformFilter === 'all'
-          ? allOrders
-          : (await getOrdersAsObjects(platformFilter)).orders;
-        const storedBudget = await getMonthlyBudget();
+        try {
+          const platforms = await getSelectedPlatforms();
+          const { orders: allOrders } = await getAllOrdersAsObjects();
+          const activePlatforms = platforms.length > 0 ? platforms : ALL_PLATFORMS;
+          const validFilter =
+            platformFilter !== 'all' && !activePlatforms.includes(platformFilter)
+              ? 'all'
+              : platformFilter;
+          const displayOrders = validFilter === 'all'
+            ? allOrders
+            : (await getOrdersAsObjects(validFilter)).orders;
+          const storedBudget = await getMonthlyBudget();
 
-        if (!active) {
-          return;
+          if (!active) {
+            return;
+          }
+
+          setSelectedPlatforms(activePlatforms);
+          if (validFilter !== platformFilter) {
+            setPlatformFilter(validFilter);
+          }
+          setOrders(displayOrders);
+          setTotalOrderCount(allOrders.length);
+          setBudget(storedBudget);
+        } catch (error) {
+          console.error('Failed to load insights data:', error);
         }
-
-        setSelectedPlatforms(platforms.length > 0 ? platforms : ALL_PLATFORMS);
-        setOrders(displayOrders);
-        setTotalOrderCount(allOrders.length);
-        setBudget(storedBudget);
       })();
 
       return () => {

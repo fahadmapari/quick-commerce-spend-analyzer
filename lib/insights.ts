@@ -63,8 +63,10 @@ function filterOrdersByRange(orders: Order[], range: TimeRangeOption, now: Date)
     return [...orders].sort((a, b) => a.date.getTime() - b.date.getTime());
   }
 
-  const cutoff = new Date(now);
-  cutoff.setMonth(cutoff.getMonth() - range.months);
+  const targetYear = now.getFullYear();
+  const targetMonth = now.getMonth() - range.months;
+  const lastDayOfTarget = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const cutoff = new Date(targetYear, targetMonth, Math.min(now.getDate(), lastDayOfTarget));
 
   return orders
     .filter((order) => order.date >= cutoff)
@@ -115,18 +117,18 @@ function getHourPersona(hour: number) {
       hours: [20, 21, 22, 23, 0, 1, 2, 3, 4],
     };
   }
-  if (hour >= 5 && hour <= 9) {
+  if (hour >= 5 && hour <= 10) {
     return {
       label: 'Early Bird',
       accentColor: PERSONALITY_COLORS.amber,
-      hours: [5, 6, 7, 8, 9],
+      hours: [5, 6, 7, 8, 9, 10],
     };
   }
-  if (hour >= 11 && hour <= 14) {
+  if (hour >= 11 && hour <= 13) {
     return {
       label: 'Lunch Rusher',
       accentColor: PERSONALITY_COLORS.orange,
-      hours: [11, 12, 13, 14],
+      hours: [11, 12, 13],
     };
   }
   if (hour >= 14 && hour <= 17) {
@@ -564,6 +566,7 @@ function computeFrequencyTrend(
     const previousEnd = currentStart;
     const previousStart = new Date(previousEnd);
     previousStart.setDate(previousStart.getDate() - currentDays);
+    previousDays = Math.max(daysBetween(previousStart, previousEnd), 1);
     previousOrders = allOrders.filter(
       (order) => order.date >= previousStart && order.date < previousEnd
     );
@@ -695,7 +698,10 @@ function daysBetween(start: Date, end: Date): number {
 }
 
 function toDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function formatShortDate(date: Date): string {

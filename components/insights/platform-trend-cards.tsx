@@ -71,7 +71,7 @@ export function MonthlyProjectionCard({ insight }: { insight: ProjectionInsight 
               style={[
                 styles.progressFill,
                 {
-                  width: `${Math.min((insight.spentSoFar / insight.projectedTotal) * 100, 100)}%`,
+                  width: `${insight.projectedTotal > 0 ? Math.min((insight.spentSoFar / insight.projectedTotal) * 100, 100) : 0}%`,
                 },
               ]}
             />
@@ -83,11 +83,14 @@ export function MonthlyProjectionCard({ insight }: { insight: ProjectionInsight 
             <Text
               style={[
                 sharedStyles.supportingText,
-                { color: insight.projectedVsBudget > 0 ? Colors.red : Colors.green },
+                { color: insight.projectedVsBudget === 0 ? Colors.textMuted : insight.projectedVsBudget > 0 ? Colors.red : Colors.green },
               ]}
             >
-              {insight.projectedVsBudget > 0 ? 'Projected over budget by ' : 'Projected under budget by '}
-              {formatCurrency(Math.abs(Math.round(insight.projectedVsBudget)))}
+              {insight.projectedVsBudget === 0
+                ? 'On budget'
+                : insight.projectedVsBudget > 0
+                  ? `Projected over budget by ${formatCurrency(Math.abs(Math.round(insight.projectedVsBudget)))}`
+                  : `Projected under budget by ${formatCurrency(Math.abs(Math.round(insight.projectedVsBudget)))}`}
             </Text>
           ) : null}
         </>

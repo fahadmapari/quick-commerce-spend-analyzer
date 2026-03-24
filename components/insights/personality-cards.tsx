@@ -19,7 +19,7 @@ export function OrderingPersonaCard({ insight }: { insight: OrderingPersonaInsig
           </View>
           <VerticalBarChart
             values={insight.counts}
-            labels={['12', '', '', '', '', '', '6', '', '', '', '', '', '12', '', '', '', '', '', '6', '', '', '', '', '11']}
+            labels={['12', '', '', '', '', '', '6', '', '', '', '', '', '12', '', '', '', '', '', '6', '', '', '', '', '12']}
             height={110}
           />
           <View style={styles.axisLegend}>
