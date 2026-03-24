@@ -28,13 +28,13 @@ export function StreaksAndGapsCard({ insight }: { insight: StreaksGapsInsight })
         <View style={styles.twoCol}>
           <View style={styles.metricPane}>
             <Text style={styles.metricValue}>{insight.longestStreak}</Text>
-            <Text style={[styles.metricCaption, { color: Colors.green }]}>Marathon Orderer</Text>
-            <Text style={sharedStyles.supportingText}>days in your best streak</Text>
+            <Text style={[styles.metricCaption, { color: Colors.green }]}>Longest streak</Text>
+            <Text style={sharedStyles.supportingText}>consecutive days ordering</Text>
           </View>
           <View style={styles.metricPane}>
             <Text style={styles.metricValue}>{insight.longestGap}</Text>
-            <Text style={[styles.metricCaption, { color: Colors.textMuted }]}>Detox Champion</Text>
-            <Text style={sharedStyles.supportingText}>days in your longest gap</Text>
+            <Text style={[styles.metricCaption, { color: Colors.textMuted }]}>Longest gap</Text>
+            <Text style={sharedStyles.supportingText}>days between orders</Text>
           </View>
         </View>
       ) : (

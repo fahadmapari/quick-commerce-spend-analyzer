@@ -26,7 +26,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   zepto: '#7c3aed',
 };
 
-const PERSONALITY_COLORS = {
+const ACCENT_COLORS = {
   amber: '#f59e0b',
   cyan: '#06b6d4',
   purple: '#a855f7',
@@ -77,8 +77,8 @@ function emptyOrderingPersona(message = 'No orders in this period'): OrderingPer
   return {
     hasData: false,
     message,
-    label: 'No Pattern Yet',
-    accentColor: PERSONALITY_COLORS.purple,
+    label: 'Insufficient data',
+    accentColor: ACCENT_COLORS.purple,
     peakShare: 0,
     counts: new Array(24).fill(0),
     axisLabels: HOUR_AXIS_LABELS,
@@ -96,51 +96,51 @@ function computeHourDistribution(orders: Order[]): OrderingPersonaInsight {
   }
 
   const peakHour = counts.reduce((best, count, hour) => (count > counts[best] ? hour : best), 0);
-  const persona = getHourPersona(peakHour);
-  const clusterTotal = persona.hours.reduce((sum, hour) => sum + counts[hour], 0);
+  const cluster = getHourCluster(peakHour);
+  const clusterTotal = cluster.hours.reduce((sum, hour) => sum + counts[hour], 0);
 
   return {
     hasData: true,
-    label: persona.label,
-    accentColor: persona.accentColor,
+    label: cluster.label,
+    accentColor: cluster.accentColor,
     peakShare: clusterTotal / orders.length,
     counts,
     axisLabels: HOUR_AXIS_LABELS,
   };
 }
 
-function getHourPersona(hour: number) {
+function getHourCluster(hour: number) {
   if (hour >= 20 || hour <= 4) {
     return {
-      label: 'Night Owl',
-      accentColor: PERSONALITY_COLORS.purple,
+      label: 'Peak: 8 PM – 4 AM',
+      accentColor: ACCENT_COLORS.purple,
       hours: [20, 21, 22, 23, 0, 1, 2, 3, 4],
     };
   }
   if (hour >= 5 && hour <= 10) {
     return {
-      label: 'Early Bird',
-      accentColor: PERSONALITY_COLORS.amber,
+      label: 'Peak: 5 – 10 AM',
+      accentColor: ACCENT_COLORS.amber,
       hours: [5, 6, 7, 8, 9, 10],
     };
   }
   if (hour >= 11 && hour <= 13) {
     return {
-      label: 'Lunch Rusher',
-      accentColor: PERSONALITY_COLORS.orange,
+      label: 'Peak: 11 AM – 1 PM',
+      accentColor: ACCENT_COLORS.orange,
       hours: [11, 12, 13],
     };
   }
   if (hour >= 14 && hour <= 17) {
     return {
-      label: 'Afternoon Snacker',
-      accentColor: PERSONALITY_COLORS.cyan,
+      label: 'Peak: 2 – 5 PM',
+      accentColor: ACCENT_COLORS.cyan,
       hours: [14, 15, 16, 17],
     };
   }
   return {
-    label: 'Evening Planner',
-    accentColor: PERSONALITY_COLORS.orange,
+    label: 'Peak: 5 – 8 PM',
+    accentColor: ACCENT_COLORS.orange,
     hours: [17, 18, 19, 20],
   };
 }
@@ -150,8 +150,8 @@ function computeDayOfWeekDistribution(orders: Order[]): DayOfWeekPatternInsight 
     return {
       hasData: false,
       message: 'No orders in this period',
-      label: 'No Pattern Yet',
-      accentColor: PERSONALITY_COLORS.cyan,
+      label: 'Insufficient data',
+      accentColor: ACCENT_COLORS.cyan,
       counts: new Array(7).fill(0),
       peakShare: 0,
     };
@@ -169,20 +169,20 @@ function computeDayOfWeekDistribution(orders: Order[]): DayOfWeekPatternInsight 
   const peakIndex = counts.reduce((best, count, index) => (count > counts[best] ? index : best), 0);
   const peakShare = counts[peakIndex] / orders.length;
 
-  let label = 'Weekly Rhythm';
-  let accentColor = PERSONALITY_COLORS.cyan;
+  let label = 'Evenly distributed';
+  let accentColor = ACCENT_COLORS.cyan;
   if (weekendShare > 0.4) {
-    label = 'Weekend Warrior';
-    accentColor = PERSONALITY_COLORS.orange;
+    label = 'Weekend-heavy';
+    accentColor = ACCENT_COLORS.orange;
   } else if (weekdayShare > 0.75) {
-    label = 'Weekday Regular';
-    accentColor = PERSONALITY_COLORS.amber;
+    label = 'Weekday-concentrated';
+    accentColor = ACCENT_COLORS.amber;
   } else if (peakIndex === 4) {
-    label = 'Friday Fiend';
-    accentColor = PERSONALITY_COLORS.purple;
+    label = 'Friday-concentrated';
+    accentColor = ACCENT_COLORS.purple;
   } else if (peakShare <= 0.2) {
-    label = 'Spread Out';
-    accentColor = PERSONALITY_COLORS.cyan;
+    label = 'Evenly distributed';
+    accentColor = ACCENT_COLORS.cyan;
   }
 
   return {
@@ -243,7 +243,7 @@ function computePlatformSplit(
   return {
     visible: true,
     hasData: true,
-    label: top.spendShare > 0.7 ? `${capitalize(top.platform)} Loyalist` : 'Platform Switcher',
+    label: top.spendShare > 0.7 ? `${Math.round(top.spendShare * 100)}% ${capitalize(top.platform)}` : 'Split across platforms',
     topShare: top.spendShare,
     entries,
   };
@@ -343,8 +343,8 @@ function computeAvgTrend(orders: Order[]): AverageOrderTrendInsight {
     return {
       hasData: false,
       message: 'No orders in this period',
-      label: 'No Trend Yet',
-      accentColor: PERSONALITY_COLORS.purple,
+      label: 'Insufficient data',
+      accentColor: ACCENT_COLORS.purple,
       averageOrderValue: 0,
       pctChange: 0,
       direction: 'flat',
@@ -355,8 +355,8 @@ function computeAvgTrend(orders: Order[]): AverageOrderTrendInsight {
     const average = sumAmounts(orders) / orders.length;
     return {
       hasData: true,
-      label: 'Steady Spender',
-      accentColor: PERSONALITY_COLORS.cyan,
+      label: 'Stable',
+      accentColor: ACCENT_COLORS.cyan,
       averageOrderValue: average,
       pctChange: 0,
       direction: 'flat',
@@ -374,8 +374,8 @@ function computeAvgTrend(orders: Order[]): AverageOrderTrendInsight {
   if (pctChange > 10) {
     return {
       hasData: true,
-      label: 'Lifestyle Creep',
-      accentColor: PERSONALITY_COLORS.orange,
+      label: 'Avg rising',
+      accentColor: ACCENT_COLORS.orange,
       averageOrderValue: overallAvg,
       pctChange,
       direction: 'up',
@@ -384,8 +384,8 @@ function computeAvgTrend(orders: Order[]): AverageOrderTrendInsight {
   if (pctChange < -10) {
     return {
       hasData: true,
-      label: 'Inflation Fighter',
-      accentColor: PERSONALITY_COLORS.amber,
+      label: 'Avg declining',
+      accentColor: ACCENT_COLORS.amber,
       averageOrderValue: overallAvg,
       pctChange,
       direction: 'down',
@@ -394,8 +394,8 @@ function computeAvgTrend(orders: Order[]): AverageOrderTrendInsight {
 
   return {
     hasData: true,
-    label: 'Steady Spender',
-    accentColor: PERSONALITY_COLORS.cyan,
+    label: 'Stable',
+    accentColor: ACCENT_COLORS.cyan,
     averageOrderValue: overallAvg,
     pctChange,
     direction: 'flat',
@@ -423,41 +423,41 @@ function computeSpendDistribution(orders: Order[]): SpendDistributionInsight {
     return {
       hasData: false,
       message: 'No orders in this period',
-      label: 'No Basket Yet',
-      accentColor: PERSONALITY_COLORS.purple,
+      label: 'Insufficient data',
+      accentColor: ACCENT_COLORS.purple,
       dominantShare: 0,
       buckets,
     };
   }
 
-  const quickRunnerShare = (buckets[0].count + buckets[1].count) / orders.length;
-  const bulkBuyerShare = (buckets[3].count + buckets[4].count) / orders.length;
+  const lowEndShare = (buckets[0].count + buckets[1].count) / orders.length;
+  const highEndShare = (buckets[3].count + buckets[4].count) / orders.length;
   const dominantBucket = buckets.reduce((best, bucket) => (bucket.count > best.count ? bucket : best), buckets[0]);
   const dominantShare = dominantBucket.count / orders.length;
 
-  if (quickRunnerShare > 0.5) {
+  if (lowEndShare > 0.5) {
     return {
       hasData: true,
-      label: 'Quick Runner',
-      accentColor: PERSONALITY_COLORS.amber,
-      dominantShare: quickRunnerShare,
+      label: 'Concentrated under ₹500',
+      accentColor: ACCENT_COLORS.amber,
+      dominantShare: lowEndShare,
       buckets,
     };
   }
-  if (bulkBuyerShare > 0.5) {
+  if (highEndShare > 0.5) {
     return {
       hasData: true,
-      label: 'Bulk Buyer',
-      accentColor: PERSONALITY_COLORS.orange,
-      dominantShare: bulkBuyerShare,
+      label: 'Concentrated above ₹800',
+      accentColor: ACCENT_COLORS.orange,
+      dominantShare: highEndShare,
       buckets,
     };
   }
 
   return {
     hasData: true,
-    label: 'Mixed Basket',
-    accentColor: PERSONALITY_COLORS.cyan,
+    label: 'Spread across bands',
+    accentColor: ACCENT_COLORS.cyan,
     dominantShare,
     buckets,
   };
@@ -502,25 +502,25 @@ function computeRecords(orders: Order[]): RecordsExtremesInsight {
       label: 'Biggest Order',
       amount: biggest.amount,
       subtitle: formatShortDate(biggest.date),
-      accentColor: PERSONALITY_COLORS.amber,
+      accentColor: ACCENT_COLORS.amber,
     },
     {
       label: 'Smallest Order',
       amount: smallest.amount,
       subtitle: formatShortDate(smallest.date),
-      accentColor: PERSONALITY_COLORS.cyan,
+      accentColor: ACCENT_COLORS.cyan,
     },
     {
-      label: 'Priciest Day',
+      label: 'Highest Spend Day',
       amount: priciestDay.total,
       subtitle: formatShortDate(priciestDay.date),
       accentColor: '#ef4444',
     },
     {
-      label: 'Priciest Week',
+      label: 'Highest Spend Week',
       amount: priciestWeek.total,
       subtitle: `${formatShortDate(priciestWeek.start)} - ${formatShortDate(priciestWeek.end)}`,
-      accentColor: PERSONALITY_COLORS.purple,
+      accentColor: ACCENT_COLORS.purple,
     },
   ];
 
@@ -542,8 +542,8 @@ function computeFrequencyTrend(
       message: 'No orders in this period',
       currentPace: 0,
       previousPace: 0,
-      trendLabel: 'No pace yet',
-      trendColor: PERSONALITY_COLORS.cyan,
+      trendLabel: 'Insufficient data',
+      trendColor: ACCENT_COLORS.cyan,
     };
   }
 
@@ -579,8 +579,8 @@ function computeFrequencyTrend(
     hasData: true,
     currentPace,
     previousPace,
-    trendLabel: delta > 0.15 ? 'Accelerating' : delta < -0.15 ? 'Decelerating' : 'Holding Steady',
-    trendColor: delta > 0.15 ? '#ef4444' : delta < -0.15 ? '#22c55e' : PERSONALITY_COLORS.cyan,
+    trendLabel: delta > 0.15 ? 'Pace increasing' : delta < -0.15 ? 'Pace decreasing' : 'Pace steady',
+    trendColor: delta > 0.15 ? '#ef4444' : delta < -0.15 ? '#22c55e' : ACCENT_COLORS.cyan,
   };
 }
 
@@ -625,8 +625,8 @@ function computeMultiOrderDays(orders: Order[]): MultiOrderDaysInsight {
     return {
       hasData: false,
       message: 'No orders in this period',
-      label: 'No Pattern Yet',
-      accentColor: PERSONALITY_COLORS.cyan,
+      label: 'Insufficient data',
+      accentColor: ACCENT_COLORS.cyan,
       multiOrderDays: 0,
       totalOrderingDays: 0,
       percentage: 0,
@@ -643,14 +643,14 @@ function computeMultiOrderDays(orders: Order[]): MultiOrderDaysInsight {
   const multiOrderDays = Array.from(perDay.values()).filter((count) => count >= 2).length;
   const percentage = totalOrderingDays > 0 ? multiOrderDays / totalOrderingDays : 0;
 
-  let label = 'Occasional Double';
-  let accentColor = PERSONALITY_COLORS.cyan;
+  let label = `${Math.round(percentage * 100)}% repeat rate`;
+  let accentColor = ACCENT_COLORS.cyan;
   if (percentage > 0.15) {
-    label = 'Forgot Something Again';
-    accentColor = PERSONALITY_COLORS.orange;
+    label = `High repeat rate (${Math.round(percentage * 100)}%)`;
+    accentColor = ACCENT_COLORS.orange;
   } else if (percentage < 0.05) {
-    label = 'One-Trip Wonder';
-    accentColor = PERSONALITY_COLORS.amber;
+    label = `Low repeat rate (${Math.round(percentage * 100)}%)`;
+    accentColor = ACCENT_COLORS.amber;
   }
 
   return {

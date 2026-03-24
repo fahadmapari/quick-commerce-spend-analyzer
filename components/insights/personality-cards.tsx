@@ -8,7 +8,7 @@ import { EmptyInsight, InsightCard, sharedStyles } from './shared';
 
 export function OrderingPersonaCard({ insight }: { insight: OrderingPersonaInsight }) {
   return (
-    <InsightCard label="Ordering Persona">
+    <InsightCard label="Peak Ordering Hours">
       {insight.hasData ? (
         <>
           <View style={styles.topRow}>

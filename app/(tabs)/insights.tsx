@@ -145,7 +145,7 @@ export default function InsightsScreen() {
         </View>
       ) : (
         <>
-          <InsightSectionHeader title="Your Personality" />
+          <InsightSectionHeader title="Ordering Patterns" />
           <OrderingPersonaCard insight={insights.orderingPersona} />
           <DayOfWeekPatternCard insight={insights.dayOfWeekPattern} />
 

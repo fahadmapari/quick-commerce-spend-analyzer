@@ -11,7 +11,7 @@ export function PlatformLoyaltyCard({ insight }: { insight: PlatformSplitInsight
   }
 
   return (
-    <InsightCard label="Platform Loyalty">
+    <InsightCard label="Platform Breakdown">
       {insight.hasData ? (
         <>
           <Text style={styles.heading}>{insight.label}</Text>
