@@ -253,6 +253,10 @@ export const AUTOMATION_BRIDGE_SCRIPT = `
 
       if (failedBanner && failedBanner.contains(container)) continue;
 
+      // Only include delivered orders — the order card must contain "arrived"
+      var card = container.closest('[role="button"]');
+      if (!card || normalize(card.textContent).indexOf('arrived') === -1) continue;
+
       var priceEls = container.querySelectorAll('.tw-text-200.tw-font-regular');
       if (priceEls.length < 2) continue;
 
