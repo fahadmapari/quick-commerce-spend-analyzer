@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "blinkitanalyser",
+    "scheme": "qcspendtracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.blinkitanalyser",
+      "bundleIdentifier": "com.anonymous.qcspendtracker",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Allow blinkit-analyser to use your location so Blinkit can load the nearest store automatically during sync."
       }
@@ -28,7 +28,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.anonymous.blinkitanalyser"
+      "package": "com.anonymous.qcspendtracker"
     },
     "web": {
       "output": "static",
