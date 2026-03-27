@@ -5,6 +5,7 @@ import { MonthOverMonthCard, MonthlyProjectionCard, PlatformLoyaltyCard } from '
 import { AverageOrderTrendCard, SpendDistributionCard } from '@/components/insights/spending-cards';
 import { InsightSectionHeader } from '@/components/insights/shared';
 import { computeInsights } from '@/lib/insights';
+import { showInsightsInterstitialIfLoaded } from '@/lib/ads';
 import { getSelectedPlatforms } from '@/lib/platformSettings';
 import { getAllOrdersAsObjects, getMonthlyBudget, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
@@ -23,6 +24,14 @@ export default function InsightsScreen() {
   const [platformFilter, setPlatformFilter] = useState<PlatformId | 'all'>('all');
   const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformId[]>([]);
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      showInsightsInterstitialIfLoaded().catch((error) => {
+        console.error('Failed to present insights interstitial:', error);
+      });
+    }, [])
+  );
 
   useFocusEffect(
     useCallback(() => {

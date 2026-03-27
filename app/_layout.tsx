@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import 'react-native-reanimated';
 import { runMigrationIfNeeded } from '@/lib/migration';
 import { initNotifications, checkAndReschedule } from '@/lib/notifications';
+import { initializeMobileAds } from '@/lib/ads';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -20,6 +21,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     runMigrationIfNeeded().finally(() => setReady(true));
+  }, []);
+
+  useEffect(() => {
+    initializeMobileAds().catch((error) => {
+      console.error('Failed to initialize Google Mobile Ads:', error);
+    });
   }, []);
 
   // Initialize notifications + foreground listener
