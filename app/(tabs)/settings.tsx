@@ -1,39 +1,41 @@
-import { Colors } from "@/src/theme/colors";
-import { PlatformId, ALL_PLATFORMS, PLATFORM_CONFIGS } from "@/types/platform";
 import {
   getSelectedPlatforms,
-  setSelectedPlatforms,,
-  getNotificationSettings,
-  NotificationSettings,
-
+  setSelectedPlatforms,
 } from "@/lib/platformSettings";
 import { requestSessionReset } from "@/lib/sessionReset";
 import {
-  clearOrdersOnly,
   clearAllOrders,
+  clearOrdersOnly,
   getMonthlyBudget,
-  setMonthlyBudget,
+  getNotificationSettings,
   getStoredAccountIdentity,
+  NotificationSettings,
+  setMonthlyBudget,
 } from "@/lib/storage";
+import { Colors } from "@/src/theme/colors";
+import { ALL_PLATFORMS, PLATFORM_CONFIGS, PlatformId } from "@/types/platform";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Alert,
   Platform,
-
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { getNotificationSettings, NotificationSettings } from "@/lib/storage";
+
 import {
-  enableNotifications,
-  disableNotifications,
-  updateNotificationTime,
-  getNextReminderLabel,
   cancelNotification,
+  disableNotifications,
+  enableNotifications,
+  getNextReminderLabel,
+  updateNotificationTime,
 } from "@/lib/notifications";
 
 const mono = Platform.select({ ios: "ui-monospace", default: "monospace" });
