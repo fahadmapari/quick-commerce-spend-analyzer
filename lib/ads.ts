@@ -1,13 +1,14 @@
 import { Platform } from 'react-native';
+import { getGamificationState } from './storage';
 
 type GoogleMobileAdsModule = typeof import('react-native-google-mobile-ads');
 type InterstitialAdInstance = ReturnType<GoogleMobileAdsModule['InterstitialAd']['createForAdRequest']>;
 
 let adsModule: GoogleMobileAdsModule | null | undefined;
 let mobileAdsInitPromise: Promise<unknown> | null = null;
-let insightsInterstitial: InterstitialAdInstance | null = null;
-let insightsInterstitialLoaded = false;
-let insightsInterstitialShowing = false;
+let appInterstitial: InterstitialAdInstance | null = null;
+let appInterstitialLoaded = false;
+let appInterstitialShowing = false;
 
 const supportedPlatform = Platform.OS === 'android' || Platform.OS === 'ios';
 
@@ -21,6 +22,7 @@ function getAdsModule() {
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     adsModule = require('react-native-google-mobile-ads') as GoogleMobileAdsModule;
   } catch (error) {
     console.warn('Google Mobile Ads native module is unavailable. Build a dev/native client to test ads.', error);
@@ -30,7 +32,7 @@ function getAdsModule() {
   return adsModule;
 }
 
-function getInsightsInterstitialUnitId(module: GoogleMobileAdsModule) {
+function getInterstitialUnitId(module: GoogleMobileAdsModule) {
   if (__DEV__) {
     return module.TestIds.INTERSTITIAL;
   }
@@ -44,12 +46,12 @@ function getInsightsInterstitialUnitId(module: GoogleMobileAdsModule) {
   return productionUnitId ?? module.TestIds.INTERSTITIAL;
 }
 
-function prepareInsightsInterstitial(module: GoogleMobileAdsModule) {
-  if (insightsInterstitial) {
-    return insightsInterstitial;
+function prepareInterstitial(module: GoogleMobileAdsModule) {
+  if (appInterstitial) {
+    return appInterstitial;
   }
 
-  const adUnitId = getInsightsInterstitialUnitId(module);
+  const adUnitId = getInterstitialUnitId(module);
   if (!adUnitId) {
     return null;
   }
@@ -59,26 +61,26 @@ function prepareInsightsInterstitial(module: GoogleMobileAdsModule) {
   });
 
   interstitial.addAdEventListener(module.AdEventType.LOADED, () => {
-    insightsInterstitialLoaded = true;
+    appInterstitialLoaded = true;
   });
 
   interstitial.addAdEventListener(module.AdEventType.OPENED, () => {
-    insightsInterstitialShowing = true;
+    appInterstitialShowing = true;
   });
 
   interstitial.addAdEventListener(module.AdEventType.CLOSED, () => {
-    insightsInterstitialLoaded = false;
-    insightsInterstitialShowing = false;
+    appInterstitialLoaded = false;
+    appInterstitialShowing = false;
     interstitial.load();
   });
 
   interstitial.addAdEventListener(module.AdEventType.ERROR, (error) => {
-    insightsInterstitialLoaded = false;
-    insightsInterstitialShowing = false;
-    console.warn('Insights interstitial failed to load or show.', error);
+    appInterstitialLoaded = false;
+    appInterstitialShowing = false;
+    console.warn('Interstitial ad failed to load or show.', error);
   });
 
-  insightsInterstitial = interstitial;
+  appInterstitial = interstitial;
   interstitial.load();
 
   return interstitial;
@@ -95,7 +97,7 @@ export async function initializeMobileAds() {
       .default()
       .initialize()
       .then(() => {
-        prepareInsightsInterstitial(module);
+        prepareInterstitial(module);
       })
       .catch((error) => {
         mobileAdsInitPromise = null;
@@ -106,7 +108,7 @@ export async function initializeMobileAds() {
   await mobileAdsInitPromise;
 }
 
-export async function showInsightsInterstitialIfLoaded() {
+export async function showInterstitialIfLoaded() {
   const module = getAdsModule();
   if (!module) {
     return false;
@@ -114,11 +116,20 @@ export async function showInsightsInterstitialIfLoaded() {
 
   await initializeMobileAds();
 
-  const interstitial = prepareInsightsInterstitial(module);
-  if (!interstitial || !insightsInterstitialLoaded || insightsInterstitialShowing) {
+  const interstitial = prepareInterstitial(module);
+  if (!interstitial || !appInterstitialLoaded || appInterstitialShowing) {
     return false;
   }
 
   await interstitial.show();
   return true;
+}
+
+export async function showSyncInterstitialIfEligible() {
+  const gamificationState = await getGamificationState();
+  if (gamificationState.syncHistory.length === 0) {
+    return false;
+  }
+
+  return showInterstitialIfLoaded();
 }

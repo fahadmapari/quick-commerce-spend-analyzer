@@ -9,6 +9,7 @@ import { Colors } from '@/src/theme/colors';
 import PlatformSelectionModal from '@/components/platform-selection-modal';
 import PlatformSyncWebView from '@/components/platform-sync-webview';
 import FirstSyncModal from '@/components/first-sync-modal';
+import { showSyncInterstitialIfEligible } from '@/lib/ads';
 import { getNotificationPromptShown } from '@/lib/storage';
 import { checkAndReschedule } from '@/lib/notifications';
 import { useFocusEffect } from 'expo-router';
@@ -26,6 +27,16 @@ export default function SyncScreen() {
   const [state, setState] = useState<SyncState>({ status: 'loading' });
   const [showFirstSyncModal, setShowFirstSyncModal] = useState(false);
 
+  const beginSyncing = useCallback(async (platforms: PlatformId[]) => {
+    try {
+      await showSyncInterstitialIfEligible();
+    } catch (error) {
+      console.error('Failed to present sync interstitial:', error);
+    }
+
+    setState({ status: 'syncing', platformIndex: 0, platforms });
+  }, []);
+
   const startSyncFlow = useCallback(async () => {
     const completed = await hasCompletedPlatformSelection();
     if (!completed) {
@@ -39,8 +50,8 @@ export default function SyncScreen() {
       return;
     }
 
-    setState({ status: 'syncing', platformIndex: 0, platforms });
-  }, []);
+    await beginSyncing(platforms);
+  }, [beginSyncing]);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,7 +62,7 @@ export default function SyncScreen() {
 
   const handlePlatformSelection = async (platforms: PlatformId[]) => {
     await markPlatformSelectionComplete(platforms);
-    setState({ status: 'syncing', platformIndex: 0, platforms });
+    await beginSyncing(platforms);
   };
 
   if (state.status === 'loading') {

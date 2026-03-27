@@ -4,8 +4,8 @@ import { DayOfWeekPatternCard, OrderingPersonaCard, RecordsAndExtremesCard } fro
 import { MonthOverMonthCard, MonthlyProjectionCard, PlatformLoyaltyCard } from '@/components/insights/platform-trend-cards';
 import { AverageOrderTrendCard, SpendDistributionCard } from '@/components/insights/spending-cards';
 import { InsightSectionHeader } from '@/components/insights/shared';
+import { showSyncInterstitialIfEligible } from '@/lib/ads';
 import { computeInsights } from '@/lib/insights';
-import { showInsightsInterstitialIfLoaded } from '@/lib/ads';
 import { getSelectedPlatforms } from '@/lib/platformSettings';
 import { getAllOrdersAsObjects, getMonthlyBudget, getOrdersAsObjects } from '@/lib/storage';
 import { Colors } from '@/src/theme/colors';
@@ -27,7 +27,7 @@ export default function InsightsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      showInsightsInterstitialIfLoaded().catch((error) => {
+      showSyncInterstitialIfEligible().catch((error) => {
         console.error('Failed to present insights interstitial:', error);
       });
     }, [])

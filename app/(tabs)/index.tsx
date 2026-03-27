@@ -691,6 +691,9 @@ export default function DashboardScreen() {
             Go to the <Text style={styles.emptyAccent}>Sync</Text> tab, select your platforms,
             and we will extract your order history automatically.
           </Text>
+          <Pressable style={styles.emptyButton} onPress={() => router.push('/explore')}>
+            <Text style={styles.emptyButtonText}>Go to Sync</Text>
+          </Pressable>
           <Text style={styles.emptyPrivacy}>
             Your data never leaves your device. Everything is stored locally — we don't send anything to any server.
           </Text>
@@ -1466,6 +1469,18 @@ const styles = StyleSheet.create({
   emptyAccent: {
     color: Colors.green,
     fontWeight: '600',
+  },
+  emptyButton: {
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: Colors.green,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    color: Colors.white,
+    fontWeight: '700',
   },
   emptyPrivacy: {
     fontSize: 12,
