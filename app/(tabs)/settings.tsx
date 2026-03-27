@@ -1,41 +1,47 @@
-import { Colors } from '@/src/theme/colors';
-import { PlatformId, ALL_PLATFORMS, PLATFORM_CONFIGS } from '@/types/platform';
-import { getSelectedPlatforms, setSelectedPlatforms } from '@/lib/platformSettings';
-import { requestSessionReset } from '@/lib/sessionReset';
-import { clearOrdersOnly, clearAllOrders, getMonthlyBudget, setMonthlyBudget, getStoredAccountIdentity } from '@/lib/storage';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { Colors } from "@/src/theme/colors";
+import { PlatformId, ALL_PLATFORMS, PLATFORM_CONFIGS } from "@/types/platform";
+import {
+  getSelectedPlatforms,
+  setSelectedPlatforms,,
+  getNotificationSettings,
+  NotificationSettings,
+
+} from "@/lib/platformSettings";
+import { requestSessionReset } from "@/lib/sessionReset";
+import {
+  clearOrdersOnly,
+  clearAllOrders,
+  getMonthlyBudget,
+  setMonthlyBudget,
+  getStoredAccountIdentity,
+} from "@/lib/storage";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
+
   Text,
   TextInput,
   View,
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import {
-  getNotificationSettings,
-  NotificationSettings,
-} from '@/lib/storage';
+} from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { getNotificationSettings, NotificationSettings } from "@/lib/storage";
 import {
   enableNotifications,
   disableNotifications,
   updateNotificationTime,
   getNextReminderLabel,
   cancelNotification,
-} from '@/lib/notifications';
+} from "@/lib/notifications";
 
-const mono = Platform.select({ ios: 'ui-monospace', default: 'monospace' });
+const mono = Platform.select({ ios: "ui-monospace", default: "monospace" });
 
 export default function SettingsScreen() {
   const [platforms, setPlatforms] = useState<PlatformId[]>([]);
   const [budget, setBudget] = useState<number | null>(null);
-  const [budgetInput, setBudgetInput] = useState('');
+  const [budgetInput, setBudgetInput] = useState("");
   const [editingBudget, setEditingBudget] = useState(false);
   const [accounts, setAccounts] = useState<Record<PlatformId, string | null>>({
     blinkit: null,
@@ -57,9 +63,11 @@ export default function SettingsScreen() {
     ]);
     setPlatforms(selected.length > 0 ? selected : ALL_PLATFORMS);
     setBudget(storedBudget);
-    setBudgetInput(storedBudget ? String(storedBudget) : '');
+    setBudgetInput(storedBudget ? String(storedBudget) : "");
     const accs: Record<string, string | null> = {};
-    ALL_PLATFORMS.forEach((p, i) => { accs[p] = identities[i]; });
+    ALL_PLATFORMS.forEach((p, i) => {
+      accs[p] = identities[i];
+    });
     setAccounts(accs as Record<PlatformId, string | null>);
     const notif = await getNotificationSettings();
     setNotifSettings(notif);
@@ -71,7 +79,7 @@ export default function SettingsScreen() {
     useCallback(() => {
       loadSettings();
       return undefined;
-    }, [loadSettings])
+    }, [loadSettings]),
   );
 
   const togglePlatform = async (id: PlatformId) => {
@@ -84,7 +92,7 @@ export default function SettingsScreen() {
   };
 
   const handleSaveBudget = async () => {
-    const parsed = parseInt(budgetInput.replace(/,/g, '').trim(), 10);
+    const parsed = parseInt(budgetInput.replace(/,/g, "").trim(), 10);
     if (!Number.isFinite(parsed) || parsed <= 0) return;
     await setMonthlyBudget(parsed);
     setBudget(parsed);
@@ -94,7 +102,7 @@ export default function SettingsScreen() {
   const handleRemoveBudget = async () => {
     await setMonthlyBudget(null);
     setBudget(null);
-    setBudgetInput('');
+    setBudgetInput("");
     setEditingBudget(false);
   };
 
@@ -104,29 +112,29 @@ export default function SettingsScreen() {
       `Clear ${name} data?`,
       `This will erase all ${name} orders and log out the ${name} web session.`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Clear',
-          style: 'destructive',
+          text: "Clear",
+          style: "destructive",
           onPress: async () => {
             await clearOrdersOnly(id);
             await requestSessionReset(id);
             await loadSettings();
           },
         },
-      ]
+      ],
     );
   };
 
   const handleClearAll = () => {
     Alert.alert(
-      'Clear all data?',
-      'This will erase all orders from all platforms and reset all web sessions.',
+      "Clear all data?",
+      "This will erase all orders from all platforms and reset all web sessions.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Clear all',
-          style: 'destructive',
+          text: "Clear all",
+          style: "destructive",
           onPress: async () => {
             await clearAllOrders();
             for (const p of ALL_PLATFORMS) {
@@ -138,13 +146,16 @@ export default function SettingsScreen() {
             await loadSettings();
           },
         },
-      ]
+      ],
     );
   };
 
   const handleNotifToggle = async (value: boolean) => {
     if (value) {
-      const granted = await enableNotifications(notifSettings.hour, notifSettings.minute);
+      const granted = await enableNotifications(
+        notifSettings.hour,
+        notifSettings.minute,
+      );
       if (!granted) return;
       const updated = { ...notifSettings, enabled: true };
       setNotifSettings(updated);
@@ -175,7 +186,9 @@ export default function SettingsScreen() {
       {/* Platforms section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>PLATFORMS</Text>
-        <Text style={styles.sectionDesc}>Select which quick commerce platforms to sync.</Text>
+        <Text style={styles.sectionDesc}>
+          Select which quick commerce platforms to sync.
+        </Text>
         <View style={styles.optionList}>
           {ALL_PLATFORMS.map((id) => {
             const config = PLATFORM_CONFIGS[id];
@@ -186,12 +199,28 @@ export default function SettingsScreen() {
                 style={[styles.option, isSelected && styles.optionSelected]}
                 onPress={() => togglePlatform(id)}
               >
-                <View style={[styles.iconCircle, { backgroundColor: config.color + '22' }]}>
-                  <Ionicons name={config.icon as any} size={20} color={config.color} />
+                <View
+                  style={[
+                    styles.iconCircle,
+                    { backgroundColor: config.color + "22" },
+                  ]}
+                >
+                  <Ionicons
+                    name={config.icon as any}
+                    size={20}
+                    color={config.color}
+                  />
                 </View>
                 <Text style={styles.optionLabel}>{config.displayName}</Text>
-                <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Ionicons name="checkmark" size={14} color={Colors.white} />}
+                <View
+                  style={[
+                    styles.checkbox,
+                    isSelected && styles.checkboxSelected,
+                  ]}
+                >
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={14} color={Colors.white} />
+                  )}
                 </View>
               </Pressable>
             );
@@ -206,7 +235,7 @@ export default function SettingsScreen() {
           <View style={styles.budgetEditRow}>
             <TextInput
               value={budgetInput}
-              onChangeText={(t) => setBudgetInput(t.replace(/[^\d]/g, ''))}
+              onChangeText={(t) => setBudgetInput(t.replace(/[^\d]/g, ""))}
               placeholder="15000"
               placeholderTextColor={Colors.textPlaceholder}
               keyboardType="number-pad"
@@ -217,7 +246,10 @@ export default function SettingsScreen() {
               <Pressable style={styles.budgetSave} onPress={handleSaveBudget}>
                 <Text style={styles.budgetSaveText}>Save</Text>
               </Pressable>
-              <Pressable style={styles.budgetCancel} onPress={() => setEditingBudget(false)}>
+              <Pressable
+                style={styles.budgetCancel}
+                onPress={() => setEditingBudget(false)}
+              >
                 <Text style={styles.budgetCancelText}>Cancel</Text>
               </Pressable>
             </View>
@@ -228,14 +260,21 @@ export default function SettingsScreen() {
             )}
           </View>
         ) : (
-          <Pressable style={styles.budgetDisplay} onPress={() => {
-            setBudgetInput(budget ? String(budget) : '');
-            setEditingBudget(true);
-          }}>
+          <Pressable
+            style={styles.budgetDisplay}
+            onPress={() => {
+              setBudgetInput(budget ? String(budget) : "");
+              setEditingBudget(true);
+            }}
+          >
             <Text style={styles.budgetValue}>
-              {budget !== null ? `₹${budget.toLocaleString('en-IN')}` : 'Not set'}
+              {budget !== null
+                ? `₹${budget.toLocaleString("en-IN")}`
+                : "Not set"}
             </Text>
-            <Text style={styles.budgetEditLink}>{budget !== null ? 'Edit' : 'Set budget'}</Text>
+            <Text style={styles.budgetEditLink}>
+              {budget !== null ? "Edit" : "Set budget"}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -248,10 +287,14 @@ export default function SettingsScreen() {
           const identity = accounts[id];
           return (
             <View key={id} style={styles.accountRow}>
-              <View style={[styles.accountDot, { backgroundColor: config.color }]} />
+              <View
+                style={[styles.accountDot, { backgroundColor: config.color }]}
+              />
               <Text style={styles.accountPlatform}>{config.displayName}</Text>
               <Text style={styles.accountIdentity}>
-                {identity ? `+91 ${identity.slice(0, 5)} ${identity.slice(5)}` : 'Not synced'}
+                {identity
+                  ? `+91 ${identity.slice(0, 5)} ${identity.slice(5)}`
+                  : "Not synced"}
               </Text>
             </View>
           );
@@ -271,17 +314,36 @@ export default function SettingsScreen() {
           />
         </View>
         <Pressable
-          style={[styles.notifRow, !notifSettings.enabled && styles.notifRowDisabled]}
+          style={[
+            styles.notifRow,
+            !notifSettings.enabled && styles.notifRowDisabled,
+          ]}
           onPress={() => notifSettings.enabled && setShowTimePicker(true)}
           disabled={!notifSettings.enabled}
         >
-          <Text style={[styles.notifLabel, !notifSettings.enabled && styles.notifTextDisabled]}>
+          <Text
+            style={[
+              styles.notifLabel,
+              !notifSettings.enabled && styles.notifTextDisabled,
+            ]}
+          >
             Reminder Time
           </Text>
-          <Text style={[styles.notifValue, !notifSettings.enabled && styles.notifTextDisabled]}>
-            {new Date(0, 0, 0, notifSettings.hour, notifSettings.minute).toLocaleTimeString([], {
-              hour: 'numeric',
-              minute: '2-digit',
+          <Text
+            style={[
+              styles.notifValue,
+              !notifSettings.enabled && styles.notifTextDisabled,
+            ]}
+          >
+            {new Date(
+              0,
+              0,
+              0,
+              notifSettings.hour,
+              notifSettings.minute,
+            ).toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
             })}
           </Text>
         </Pressable>
@@ -317,16 +379,23 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         ))}
-        <Pressable style={[styles.clearButton, styles.clearAllButton]} onPress={handleClearAll}>
-          <Text style={[styles.clearButtonText, styles.clearAllText]}>Clear all data</Text>
+        <Pressable
+          style={[styles.clearButton, styles.clearAllButton]}
+          onPress={handleClearAll}
+        >
+          <Text style={[styles.clearButtonText, styles.clearAllText]}>
+            Clear all data
+          </Text>
         </Pressable>
       </View>
 
       {/* About */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>ABOUT</Text>
-        <Text style={styles.aboutText}>QC Spend Tracker v2.0</Text>
-        <Text style={styles.aboutSubtext}>Your quick commerce spending, analyzed.</Text>
+        <Text style={styles.aboutText}>QC Spend Tracker v1.0</Text>
+        <Text style={styles.aboutSubtext}>
+          Your quick commerce spending, analyzed.
+        </Text>
       </View>
     </ScrollView>
   );
@@ -351,7 +420,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 26,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textPrimary,
     letterSpacing: -0.5,
     marginBottom: 8,
@@ -380,8 +449,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   option: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 14,
@@ -397,14 +466,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
   optionLabel: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textPrimary,
   },
   checkbox: {
@@ -413,28 +482,28 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     borderWidth: 2,
     borderColor: Colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxSelected: {
     borderColor: Colors.green,
     backgroundColor: Colors.green,
   },
   budgetDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   budgetValue: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.textHeading,
     letterSpacing: -0.4,
   },
   budgetEditLink: {
     fontSize: 13,
     color: Colors.green,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   budgetEditRow: {
     gap: 10,
@@ -448,11 +517,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: -0.4,
   },
   budgetActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   budgetSave: {
@@ -460,11 +529,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: Colors.green,
-    alignItems: 'center',
+    alignItems: "center",
   },
   budgetSaveText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.white,
   },
   budgetCancel: {
@@ -474,7 +543,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgOverlay,
     borderWidth: 1,
     borderColor: Colors.border,
-    alignItems: 'center',
+    alignItems: "center",
   },
   budgetCancelText: {
     fontSize: 14,
@@ -483,11 +552,11 @@ const styles = StyleSheet.create({
   budgetRemoveText: {
     fontSize: 12,
     color: Colors.textMuted,
-    textAlign: 'center',
+    textAlign: "center",
   },
   accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 4,
   },
@@ -498,7 +567,7 @@ const styles = StyleSheet.create({
   },
   accountPlatform: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textPrimary,
     width: 70,
   },
@@ -514,12 +583,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgOverlay,
     borderWidth: 1,
     borderColor: Colors.borderSubtle,
-    alignItems: 'center',
+    alignItems: "center",
   },
   clearButtonText: {
     fontSize: 14,
     color: Colors.textMuted,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   clearAllButton: {
     borderColor: Colors.red,
@@ -529,9 +598,9 @@ const styles = StyleSheet.create({
     color: Colors.red,
   },
   notifRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 6,
   },
   notifRowDisabled: {
@@ -539,13 +608,13 @@ const styles = StyleSheet.create({
   },
   notifLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textPrimary,
   },
   notifValue: {
     fontSize: 14,
     color: Colors.green,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   notifTextDisabled: {
     color: Colors.textDisabled,
@@ -557,7 +626,7 @@ const styles = StyleSheet.create({
   aboutText: {
     fontSize: 14,
     color: Colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   aboutSubtext: {
     fontSize: 12,
