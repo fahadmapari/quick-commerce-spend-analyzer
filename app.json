@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "blinkit-analyser",
+    "name": "QC Spend Tracker",
     "slug": "blinkit-analyser",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.qcspendtracker",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Allow blinkit-analyser to use your location so Blinkit can load the nearest store automatically during sync."
+        "NSLocationWhenInUseUsageDescription": "Allow QC Spend Tracker to use your location so Blinkit can load the nearest store automatically during sync."
       }
     },
     "android": {
@@ -40,7 +40,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow blinkit-analyser to use your location so Blinkit can load the nearest store automatically during sync."
+          "locationWhenInUsePermission": "Allow QC Spend Tracker to use your location so Blinkit can load the nearest store automatically during sync."
         }
       ],
       [

@@ -126,7 +126,7 @@ export default function FirstSyncModal({ visible, onDismiss }: Props) {
             <View style={styles.deniedBanner}>
               <Ionicons name="information-circle" size={16} color={Colors.textMuted} />
               <Text style={styles.deniedText}>
-                Notifications are blocked. Enable them in your device's Settings app to receive reminders.
+                Notifications are blocked. Enable them in your device settings to receive reminders.
               </Text>
             </View>
           )}

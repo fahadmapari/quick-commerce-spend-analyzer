@@ -24,7 +24,6 @@ const LABEL_H = 36;
 const GRID_LINES = 4;
 const TOOLTIP_W = 130;
 const TOOLTIP_H = 52;
-const TOOLTIP_PAD = 6; // gap from top of chart
 
 interface Props {
   data: MonthlySpend[]; // newest-first; reversed internally

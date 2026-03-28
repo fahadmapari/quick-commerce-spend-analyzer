@@ -1,6 +1,5 @@
 import { Colors } from '@/src/theme/colors';
-import { BadgeProgress } from '@/types/badge';
-import { CATEGORY_LABELS } from '@/types/badge';
+import { BadgeProgress, CATEGORY_LABELS } from '@/types/badge';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
 import {

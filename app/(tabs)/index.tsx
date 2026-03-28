@@ -6,7 +6,7 @@ import { computeBadges, getNewlyUnlockedBadges } from '@/lib/badges';
 import { awardXpBatch, evaluateClosedMonths, getLevelName, getLevelProgress, makeXpEvent, xpReasonLabel } from '@/lib/gamification';
 import { ensureMonthlyQuests, refreshQuestProgress, awardCompletedQuestXp, QuestProgressInputs } from '@/lib/quests';
 import { requestSessionReset } from '@/lib/sessionReset';
-import { clearAllOrders, clearOrdersOnly, getGamificationState, getMonthlyBudget, getAllOrdersAsObjects, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
+import { clearAllOrders, getGamificationState, getMonthlyBudget, getAllOrdersAsObjects, getOrdersAsObjects, getStoredAccountIdentity, setMonthlyBudget as saveMonthlyBudget } from '@/lib/storage';
 import { getSelectedPlatforms } from '@/lib/platformSettings';
 import { Colors } from '@/src/theme/colors';
 import { PlatformId, ALL_PLATFORMS, PLATFORM_CONFIGS } from '@/types/platform';
@@ -110,11 +110,10 @@ export default function DashboardScreen() {
 
         // Ensure monthly quests
         const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevMonthKey = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}`;
         const prevMonthOrders = allOrders.filter(
           (o) => o.date.getFullYear() === prevMonth.getFullYear() && o.date.getMonth() === prevMonth.getMonth()
         );
-        const currentQuests = await ensureMonthlyQuests(now, {
+        await ensureMonthlyQuests(now, {
           lastMonthOrderCount: prevMonthOrders.length,
         });
 
@@ -695,7 +694,7 @@ export default function DashboardScreen() {
             <Text style={styles.emptyButtonText}>Go to Sync</Text>
           </Pressable>
           <Text style={styles.emptyPrivacy}>
-            Your data never leaves your device. Everything is stored locally — we don't send anything to any server.
+            Your data never leaves your device. Everything is stored locally and we do not send anything to any server.
           </Text>
         </View>
       )}

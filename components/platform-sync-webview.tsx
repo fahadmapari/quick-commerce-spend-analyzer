@@ -549,7 +549,7 @@ export default function PlatformSyncWebView({ provider, onComplete, onError, lab
               <Text style={styles.eyebrow}>ACCOUNT CHANGE DETECTED</Text>
               <Text style={styles.title}>Different Account</Text>
               <Text style={styles.subtitle}>
-                The {provider.config.displayName} account you're signed into is different from the one whose orders are stored. Mixing orders will give incorrect totals.
+                The {provider.config.displayName} account you are signed into is different from the one whose orders are stored. Mixing orders will give incorrect totals.
               </Text>
             </View>
             <Pressable
